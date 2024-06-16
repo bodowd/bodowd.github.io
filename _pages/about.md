@@ -6,6 +6,7 @@ title: About
 Thanks for stopping by.
 
 [LinkedIn]
+
 [Github]
 
 Email: odowd.bing@gmail.com
