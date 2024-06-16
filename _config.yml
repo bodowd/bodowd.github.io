@@ -1,0 +1,69 @@
+remote_theme: ronv/sidey
+
+site: bodowd.github.io 
+url: #yoururl 
+title: ""
+description: "" 
+twitter:
+  username: #yourusername
+  card: #
+  creator: #yourusername
+author:
+  twitter: #yourusername
+  name: #yourusername
+  avatar: #
+  email: #youremail
+  url: #yoururl
+permalink: pretty
+
+baseurl: ""
+
+highlighter: none
+
+exclude:
+  - .jekyll-cache
+  
+compress_html:
+  clippings: all
+  comments: ["<!-- ", " -->"]
+
+sass:
+  sass_dir: _sass
+  style: :compressed
+
+plugins:
+  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-seo-tag
+  - jekyll-sitemap  
+
+collections:
+  pages:
+    output: true
+    permalink: /:name
+  posts:
+    output: true
+    permalink: /:year/:month/:day/:slug
+  notes:
+    output: true
+    permalink: /:year/:month/:day/:slug
+  
+defaults:
+  -
+    scope:
+      path: ""
+    values:
+      layout: "default"
+  -
+    scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  -
+    scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+
