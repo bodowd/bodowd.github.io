@@ -74,7 +74,7 @@ In the paper, the authors found 60% of floating-point columns had a NDV ratio
 < 0.1, which they classified as significant value repetitions.
 In the chembl database, I found ~87% of floating-point columns had a NDV ratio
 <= 0.1, even higher than the datasets the authors looked at.
-As they point out in the paper, Dicitonary Encoding would be effective here.
+As they point out in the paper, Dictionary Encoding would be effective here.
 
 I suspect that this result could be due to values in the database that come
 from assays that are more discrete than one would expect.
@@ -187,25 +187,26 @@ I took a deeper look at the length of strings and found there are some really bi
 string records. This include description of assays, but also there are molecular file
 formats in this database, which is quite common to chemistry data.
 
-I found that a molfile can reach a length of 65,000 bytes.
+I found a molfile can reach a length of 65,000 bytes.
 
 In the context of this paper and study, the focus is on looking at the data from a perspective of
 the compression and fast decompression of the data for use in analytical database systems.
 However, in cheminformatics workloads, we would not typically work on the raw string.
 
 At least in RDKit, you typically want the molecule object, a particular encoding of
-the information about a molecule, which is constructed by parsing a particular molecule
+the information about a molecule, which is constructed by parsing a molecule
 format, like the molfile or a SMILES string. With this molecule object, cheminformatic
-operations can be performed. For example, if you want to find if a molecule
-exists in the database, typically you would run the algorithm comparing data between molecule objects,
-and not between string representations. Parsing the string format into a molecule object, is
+operations can be performed. For example, if you want to find if a molecule, or
+similar molecule, exists in the database, typically you would run the algorithm
+comparing data between molecule objects and not between string representations.
+Parsing the string format into a molecule object, is
 the most computationally expensive part, at least in my experiments. Then we need
 to serialize the object to binary for storage. This serialization and later deserialization
 is cheaper compared to first part of parsing the string into the molecule object.
 
 Therefore, I created a molecule object column with the RDKit Postgres extension
-in the `compound_structures` table in the database which contains chemical structures.
-I took a look a the size of these objects and found the max byte length for the
+in the `compound_structures` table in the database, which contains chemical structures.
+I took a look at the size of these objects and found the max byte length for the
 molecules in that table was 15,762 and the min byte length was 65.
 
 The max canonical SMILES (string representation) byte length was 2045 bytes, and
@@ -225,14 +226,16 @@ Some of these properties will be very much dataset dependent.
 For example, if a company has a database of millions of molecules and a new
 assay is developed in the company, the vast majority of the millions of molecules
 may not be tested against that assay, especially if that is a very specialized or
-expensive assay. This could blow up the null ratio measurements. All in all, for the typical
-types of data, I think the chembl dataset is in the same direction as the data presented
-in this paper.
+expensive assay. This would of course affect the null ratio. All in all, for the typical
+types of data, I think the columns in this database have property values in the
+same direction as the data presented in this paper.
 
 I think the big difference is in the handling of the molecule information,
 namely the molecule objects which are needed for cheminformatic operations.
-I would be curious how a database system could leverage the binary molecule objects
-in its query execution.
+I am curious how an an analytical database system could leverage the
+binary molecule objects in its query execution. I am also curious about how
+these binary objects could affect the performance of Parquet and ORC files,
+and future formats, if at all.
 
 [1]: https://15721.courses.cs.cmu.edu/spring2024/papers/02-data1/p148-zeng.pdf
 [chembl]: https://www.ebi.ac.uk/chembl/
