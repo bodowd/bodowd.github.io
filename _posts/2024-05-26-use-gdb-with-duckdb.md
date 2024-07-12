@@ -22,18 +22,27 @@ Then, in the Makefile under `examples/embedded-c++` compile example.cpp with the
 flag:
 
 ```git
-main:
+ duckdb:
+-       cd ../.. && make
++       cd ../.. && GEN=ninja make debug DISABLE_SANITIZER=1
+
+ main:
         mkdir -p build
--       cd build && cmake .. && make
-+       cd build &&  cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+-       cd build &&  cmake -DCMAKE_BUILD_TYPE=Debug .. && make
++       cd build &&  cmake -DENABLE_SANITIZER=FALSE -DENABLE_UBSAN=0 -DCMAKE_BUILD_TYPE=Debug .. && make
         build/example
+
 
 ```
 
 Now run gdb with `gdb build/example`
 
+(May not need this step anymore after explicitly disabling the sanitizer)
 Need to set LD_PRELOAD to libasan shared object in gdb
 `(gdb) set environment LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.6`
+
+I think that if I enable the sanitizer, need to make sure to enable it in both
+the compilation of duckdb and in my main.cpp in example. But I didn't try this
 
 Now, set the breakpoint, and run and step into the code.
 
