@@ -9,7 +9,7 @@ tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 The current implementation of `is_exact_match` for finding molecules in duckdb_rdkit
 uses the standard molecule comparision algorithm found in the RDKit Postgres
 extension and the RDkit SQLite extension, chemicalite [[1]].
-Here, I apply ideas from Umbra-style/Germany-style strings [[2]] to speed up
+Here, I apply ideas from Umbra-style/German-style strings [[2]] to speed up
 exact search on molecules in duckdb by ~34x.
 
 ### Umbra-style/German-style strings
