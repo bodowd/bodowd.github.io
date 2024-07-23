@@ -8,18 +8,18 @@ tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 
 The current implementation of `is_exact_match` for finding molecules in duckdb_rdkit
 uses the standard molecule comparision algorithm found in the RDKit Postgres
-extension and the RDkit SQLite extension, chemicalite[1].
-Here, I apply ideas from Umbra-style/Germany-style strings[2] to speed up
+extension and the RDkit SQLite extension, chemicalite [[1]].
+Here, I apply ideas from Umbra-style/Germany-style strings [[2]] to speed up
 exact search on molecules in duckdb by ~34x.
 
 ### Umbra-style/German-style strings
 
-Umbra-style or German-style strings[2] is a string storage format that was introduced by Umbra[3]
+Umbra-style or German-style strings [[2]] is a string storage format that was introduced by Umbra[3]
 which makes searching through strings in database systems faster, and this format
 has been adopted in several data processing systems.
 
 The Umbra-style string has one representation for short strings,
-and one representation for long strings. You can see the details in [2] and [3].
+and one representation for long strings. You can see the details in [[2]] and [[3]].
 One strategy the Umbra-style string uses is to put a short prefix of the string
 in the encoding, and then store a pointer to the rest of the string (in the long string case).
 
@@ -115,7 +115,7 @@ applying the same idea from Umbra-style strings.
 To implement this idea, I created a new struct to store the prefix, or header,
 containing the values that will be used for the "fail-fast" checks in front
 of the binary molecule object. Excerpts of the code are shown instead of all
-the code to be brief. If you are interested in seeing more, please see the respository[4].
+the code to be brief. If you are interested in seeing more, please see the respository [[4]].
 
 Here is the key idea -- the first 20 bytes of the Umbra-style molecule stores
 the pre-calculated values
@@ -161,7 +161,7 @@ bool umbra_mol_cmp(umbra_mol_t m1, umbra_mol_t m2) {
 That's the whole idea right there.
 
 The additional code to implement this as a duckdb extension can be found in the
-repository[4], which I leave out to be brief.
+repository [[4]], which I leave out to be brief.
 
 ### Experiments
 
