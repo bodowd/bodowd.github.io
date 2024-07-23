@@ -10,7 +10,7 @@ The current implementation of `is_exact_match` for finding molecules in duckdb_r
 uses the standard molecule comparision algorithm found in the RDKit Postgres
 extension and the RDkit SQLite extension, chemicalite [[1]].
 Here, I apply ideas from Umbra-style/German-style strings [[2]] to speed up
-exact search on molecules in duckdb by ~34x.
+exact search on molecules in duckdb by ~26-60x depending on the type of query.
 
 ### Umbra-style/German-style strings
 
@@ -23,9 +23,10 @@ and one representation for long strings. You can see the details in [[2]] and [[
 One strategy the Umbra-style string uses is to put a short prefix of the string
 in the encoding, and then store a pointer to the rest of the string (in the long string case).
 
-By making the prefix easily accessed, the database system can rapidly rule out
-records that have no chance of being equal. If one string starts with "Hi"
-and the other string starts with "Dude!", it doesn't matter what the rest of
+The prefix allows the database system to rapidly rule out
+records that have no chance of being equal without following the pointer to the
+entire string. If one string starts with "Hi"
+and the other string starts with "Bye", it doesn't matter what the rest of
 the string is, these two strings are not equal.
 
 I wanted to apply this prefix idea to the exact molecule search.
@@ -89,7 +90,7 @@ is no way the two molecules are the same. Only after the inexpensive checks are
 done, more expensive checks like substructure searches and converting the molecule
 to a RDKit canonicalized SMILES string are done.
 
-The molecules are stored as a binary format in the database, and then they need to
+The molecules are stored in a binary format in the database, and then they need to
 be deserialized into RDKit molecule objects in order to access data like the
 number of atoms in the molecule, through the molecule object.
 
@@ -100,25 +101,26 @@ and then store these values alongside the serialized RDKit molecule object.
 This would be similar to the prefix idea of the Umbra-style strings.
 
 Although I did quick checks of how much time the deserialization process takes,
-I don't have any data to present which would compare the time for deserialization relative
-to the other operations carried out by duckdb in query execution. That would be
+I don't have any data to present which would compare the time deserialization takes relative
+to the other operations carried out by duckdb during query execution. That would be
 interesting to quantify though.
 
 Anyhow, my hypothesis was that by precalculating and storing these values, I could speed
-up the search, assuming that the deserialization process is "slow" relative to the
-other operations that are carried out during the query execution, by just comparing
-these values in a prefix without deserializing the molecule object -- basically
+up the search. This assumes that the deserialization process is "slow" relative to the
+other operations that are carried out during the query execution. It would then
+be possible to skip the deserialization process to quickly rule out records -- basically
 applying the same idea from Umbra-style strings.
 
 ### Approach
 
 To implement this idea, I created a new struct to store the prefix, or header,
 containing the values that will be used for the "fail-fast" checks in front
-of the binary molecule object. Excerpts of the code are shown instead of all
-the code to be brief. If you are interested in seeing more, please see the respository [[4]].
+of the binary molecule object. Excerpts of the code are shown here for brevity.
+If you are interested in seeing more, please see the respository [[4]].
 
-Here is the key idea -- the first 20 bytes of the Umbra-style molecule stores
-the pre-calculated values
+Here is the key idea -- once serialized the first 20 bytes of the Umbra-style molecule stores
+the pre-calculated values, and the rest of the binary molecule is stored afterwards,
+in order to be available for the more expensive checks, if needed.
 
 ```cpp
 struct umbra_mol_t {
@@ -132,8 +134,8 @@ struct umbra_mol_t {
 
 ```
 
-Then, to check if two molecules are an exact match, I can check the pre-calculated
-values.
+Then, to check if two molecules are an exact match, simply deserialize
+the `umbra_mol_t` and check the pre-calculated values.
 
 ```cpp
 
@@ -160,14 +162,17 @@ bool umbra_mol_cmp(umbra_mol_t m1, umbra_mol_t m2) {
 
 That's the whole idea right there.
 
-The additional code to implement this as a duckdb extension can be found in the
-repository [[4]], which I leave out to be brief.
+The additional code (like creating a new type, casts, and functions) required
+to implement this as a duckdb extension can be found in the
+repository [[4]].
 
 ### Experiments
 
+Next, I wanted to see how it performs.
+
 To run the experiment, I first copied the `molecule` table from the chembl_33
 Postgres database to a duckdb file using the Postgres duckdb extension.
-That contains ~2.4 million records.
+This table contains ~2.4 million records.
 
 ```sql
 > select count(*) from molecule;
@@ -183,18 +188,23 @@ That contains ~2.4 million records.
 Next, I created a column type for the normal RDKit molecule type, as well as for
 the Umbra-style molecule type that I implemented and populated those columns.
 
-```cpp
+```sql
+ALTER TABLE molecule ADD COLUMN mol Mol;
+UPDATE molecule SET mol=mol_from_smiles(smiles);
+
+ALTER TABLE molecule ADD COLUMN umbra_mol UmbraMol;
+UPDATE molecule SET umbra_mol=umbra_mol_from_smiles(mol);
 
 ```
 
 #### Query 1:
 
-Using the standard `is_exact_match` algorithm, it takes ~17 seconds. The search
+Using the standard storage format and `is_exact_match` algorithm, it takes ~17 seconds. The search
 is insensitive to chirality, so multiple hits are returned.
 
 ```sql
 
-select * from molecule where is_exact_match(mol,'Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O');
+D select * from molecule where is_exact_match(mol,'Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O');
 
 100% ▕████████████████████████████████████████████████████████████▏
 ┌─────────┬──────────────────────┬──────────────────────┬─────────────────────────────────────┐
@@ -233,7 +243,7 @@ Run Time (s): real 0.496 user 2.407703 sys 0.028241
 
 #### Query 2:
 
-Using the standard algorithm, it takes ~12 seconds.
+Using the standard storage format and algorithm, it takes ~12 seconds.
 
 ```sql
 D select * from molecule where is_exact_match(mol,'CCC');
@@ -258,6 +268,98 @@ D select * from molecule where umbra_is_exact_match(umbra_mol,'CCC');
 │ 222072 │ CCC     │ CCC │ CCC       │
 └────────┴─────────┴─────┴───────────┘
 Run Time (s): real 0.473 user 2.480841 sys 0.099796
+```
+
+## Queries with joining and aggregation
+
+For these queries, I copied a few tables from the chembl_33 postgres db into duckdb
+so that I can test how the performance is when joining tables.
+
+### Query 3;
+
+With the standard storage format and algorithm, it takes ~22 seconds.
+
+```sql
+D SELECT pbd.prediction_method, a.value, a.relation, m.mol FROM molecule m
+    INNER JOIN activities a ON a.molregno=m.id
+    INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+    INNER JOIN compound_properties cp ON cp.molregno=m.id
+    WHERE is_exact_match(m.mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC');
+100% ▕████████████████████████████████████████████████████████████▏
+┌───────────────────┬────────┬──────────┬───────────────────────────────────────────────────────────────────────┐
+│ prediction_method │ value  │ relation │                                  mol                                  │
+│      varchar      │ double │ varchar  │                                  mol                                  │
+├───────────────────┼────────┼──────────┼───────────────────────────────────────────────────────────────────────┤
+│ Multi domain      │   0.52 │ =        │ COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC │
+└───────────────────┴────────┴──────────┴───────────────────────────────────────────────────────────────────────┘
+Run Time (s): real 22.196 user 114.707474 sys 1.247569
+```
+
+With the Umbra-mol, it takes 0.364 seconds.
+
+```sql
+D SELECT pbd.prediction_method, a.value, a.relation, m.umbra_mol FROM molecule m
+    INNER JOIN activities a ON a.molregno=m.id
+    INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+    INNER JOIN compound_properties cp ON cp.molregno=m.id
+    WHERE umbra_is_exact_match(m.umbra_mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC')
+    ;
+┌───────────────────┬────────┬──────────┬───────────────────────────────────────────────────────────────────────┐
+│ prediction_method │ value  │ relation │                               umbra_mol                               │
+│      varchar      │ double │ varchar  │                               umbramol                                │
+├───────────────────┼────────┼──────────┼───────────────────────────────────────────────────────────────────────┤
+│ Multi domain      │   0.52 │ =        │ COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC │
+└───────────────────┴────────┴──────────┴───────────────────────────────────────────────────────────────────────┘
+Run Time (s): real 0.364 user 1.994158 sys 0.060483
+```
+
+### Query 4:
+
+Using the standard storage format and algorithm, it takes ~12 seconds
+
+```sql
+D SELECT avg(a.value), count(a.value), a.relation, m.mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.id
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  INNER JOIN compound_properties cp ON cp.molregno=m.id
+  WHERE is_exact_match(m.mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+  GROUP BY m.mol, a.relation;
+100% ▕████████████████████████████████████████████████████████████▏
+┌────────────────────┬──────────────────┬──────────┬────────────────────────────┐
+│   avg(a."value")   │ count(a."value") │ relation │            mol             │
+│       double       │      int64       │ varchar  │            mol             │
+├────────────────────┼──────────────────┼──────────┼────────────────────────────┤
+│ 1630.1423282178293 │             1818 │ =        │ CC(=O)Nc1nnc(S(N)(=O)=O)s1 │
+└────────────────────┴──────────────────┴──────────┴────────────────────────────┘
+Run Time (s): real 12.245 user 64.312706 sys 1.056914
+```
+
+Using the Umbra-style storage format and algorithm, it takes ~0.36 seconds.
+
+```sql
+D SELECT avg(a.value), count(a.value), a.relation, m.umbra_mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.id
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  INNER JOIN compound_properties cp ON cp.molregno=m.id
+  WHERE umbra_is_exact_match(m.umbra_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+  GROUP BY m.umbra_mol, a.relation
+  ;
+┌───────────────────┬──────────────────┬──────────┬────────────────────────────┐
+│  avg(a."value")   │ count(a."value") │ relation │         umbra_mol          │
+│      double       │      int64       │ varchar  │          umbramol          │
+├───────────────────┼──────────────────┼──────────┼────────────────────────────┤
+│ 1630.142328217826 │             1818 │ =        │ CC(=O)Nc1nnc(S(N)(=O)=O)s1 │
+└───────────────────┴──────────────────┴──────────┴────────────────────────────┘
+Run Time (s): real 0.359 user 1.912700 sys 0.077231
+
+```
+
+and the corresponding query yields in postgres
+
+```sql
+          avg           | count | relation |         rdkit_mol
+------------------------+-------+----------+----------------------------
+ 1630.14232821782178218 |  1818 | =        | CC(=O)Nc1nnc(S(N)(=O)=O)s1
 ```
 
 [1]: https://github.com/rvianello/chemicalite
