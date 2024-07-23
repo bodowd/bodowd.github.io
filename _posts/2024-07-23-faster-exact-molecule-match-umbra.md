@@ -14,7 +14,7 @@ exact search on molecules in duckdb by ~34x.
 
 ### Umbra-style/German-style strings
 
-Umbra-style or German-style strings [[2]] is a string storage format that was introduced by Umbra[3]
+Umbra-style, or German-style strings, [[2]] is a string storage format that was introduced by Umbra [[3]]
 which makes searching through strings in database systems faster, and this format
 has been adopted in several data processing systems.
 
