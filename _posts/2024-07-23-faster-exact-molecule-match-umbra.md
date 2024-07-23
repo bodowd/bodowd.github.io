@@ -1,12 +1,10 @@
 ---
 layout: post
-title: making exact molecule match faster in duckdb inspired by umbra
+title: Moleküle? Umbra-style strings applied to molecules to speed up molecular equality searches in duckdb_rdkit
 description: ""
 summary: ""
 tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 ---
-
-# Moleküle? Umbra-style strings applied to molecules to speed up molecular equality searches in duckdb_rdkit
 
 The current implementation of `is_exact_match` for finding molecules in duckdb_rdkit
 uses the standard molecule comparision algorithm found in the RDKit Postgres
