@@ -433,11 +433,11 @@ is displayed in seconds for the standard method and the Umbra-mol method.
 Speedup is calculated by `standard method (s) / Umbra-mol (s)`
 
 | Query | Standard method (s) | Umbra-mol (s) | speedup |
-| ----- | ------------------- | ------------- | ------- |
-| 1     | 17.238              | 0.496         | 34.75x  |
-| 2     | 12.555              | 0.473         | 26.54x  |
-| 3     | 22.196              | 0.364         | 60.98x  |
-| 4     | 12.245              | 0.359         | 34.11x  |
+| :---- | :------------------ | :------------ | ------: |
+| 1     | 17.238              | 0.496         |  34.75x |
+| 2     | 12.555              | 0.473         |  26.54x |
+| 3     | 22.196              | 0.364         |  60.98x |
+| 4     | 12.245              | 0.359         |  34.11x |
 
 [1]: https://github.com/rvianello/chemicalite
 [2]: https://cedardb.com/blog/german_strings/
