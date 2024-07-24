@@ -174,6 +174,14 @@ To run the experiment, I first copied the `molecule` table from the chembl_33
 Postgres database to a duckdb file using the Postgres duckdb extension.
 This table contains ~2.4 million records.
 
+As a control experiment, I also ran the same query in Postgres with the RDKit
+extension (after constructing an index on
+the RDKit molecule object column).
+Note: the column names and table names may be different between the Postgres
+examples and the duckdb examples because I
+renamed the `compound_structures` table to `molecule` when importing the data
+to duckdb.
+
 ```sql
 > select count(*) from molecule;
 
@@ -241,6 +249,24 @@ D select * from molecule where umbra_is_exact_match(umbra_mol,'Cc1cn([C@H]2C[C@H
 Run Time (s): real 0.496 user 2.407703 sys 0.028241
 ```
 
+Postgres control (with gist index on molecule column)
+
+```sql
+chembl_33=# select molregno, canonical_smiles from compound_structures where rdkit_mol@='Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O';
+ molregno |                      canonical_smiles
+----------+------------------------------------------------------------
+    37202 | Cc1cn([C@H]2C[C@@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O
+    27307 | Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O
+   298564 | Cc1cn(C2CC(N=[N+]=[N-])C(CO)O2)c(=O)[nH]c1=O
+  1825987 | Cc1cn([C@@H]2C[C@H](N=[N+]=[N-])[C@H](CO)O2)c(=O)[nH]c1=O
+   372431 | Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@H](CO)O2)c(=O)[nH]c1=O
+   703067 | Cc1cn([C@@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O
+  2542096 | Cc1cn(C2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O
+(7 rows)
+
+Time: 84.304 ms
+```
+
 #### Query 2:
 
 Using the standard storage format and algorithm, it takes ~12 seconds.
@@ -270,9 +296,26 @@ D select * from molecule where umbra_is_exact_match(umbra_mol,'CCC');
 Run Time (s): real 0.473 user 2.480841 sys 0.099796
 ```
 
+The Postgres control query is really slow...
+I'm not sure why
+
+```sql
+chembl_33=# explain analyze select molregno, canonical_smiles from compound_structures where rdkit_mol@='CCC';
+                                                              QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using molidx on compound_structures  (cost=0.41..8.43 rows=1 width=63) (actual time=70015.058..232891.019 rows=1 loops=1)
+   Index Cond: (rdkit_mol @= 'CCC'::mol)
+   Rows Removed by Index Recheck: 1846471
+ Planning Time: 0.719 ms
+ Execution Time: 232893.433 ms
+(5 rows)
+
+Time: 232944.928 ms (03:52.945)
+```
+
 ## Queries with joining and aggregation
 
-For these queries, I copied a few tables from the chembl_33 postgres db into duckdb
+For these queries, I copied a few more tables from the chembl_33 postgres db into duckdb
 so that I can test how the performance is when joining tables.
 
 ### Query 3;
@@ -302,8 +345,7 @@ D SELECT pbd.prediction_method, a.value, a.relation, m.umbra_mol FROM molecule m
     INNER JOIN activities a ON a.molregno=m.id
     INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
     INNER JOIN compound_properties cp ON cp.molregno=m.id
-    WHERE umbra_is_exact_match(m.umbra_mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC')
-    ;
+    WHERE umbra_is_exact_match(m.umbra_mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC');
 ┌───────────────────┬────────┬──────────┬───────────────────────────────────────────────────────────────────────┐
 │ prediction_method │ value  │ relation │                               umbra_mol                               │
 │      varchar      │ double │ varchar  │                               umbramol                                │
@@ -311,6 +353,22 @@ D SELECT pbd.prediction_method, a.value, a.relation, m.umbra_mol FROM molecule m
 │ Multi domain      │   0.52 │ =        │ COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC │
 └───────────────────┴────────┴──────────┴───────────────────────────────────────────────────────────────────────┘
 Run Time (s): real 0.364 user 1.994158 sys 0.060483
+```
+
+Postgres control:
+
+```sql
+chembl_33=# SELECT pbd.prediction_method, a.value, a.relation, m.rdkit_mol FROM compound_structures m
+    INNER JOIN activities a ON a.molregno=m.molregno
+    INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+    INNER JOIN compound_properties cp ON cp.molregno=m.molregno
+    WHERE m.rdkit_mol@='COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC';
+ prediction_method | value | relation |                               rdkit_mol
+-------------------+-------+----------+-----------------------------------------------------------------------
+ Multi domain      |  0.52 | =        | COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC
+(1 row)
+
+Time: 161.883 ms
 ```
 
 ### Query 4:
@@ -342,8 +400,7 @@ D SELECT avg(a.value), count(a.value), a.relation, m.umbra_mol FROM molecule m
   INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
   INNER JOIN compound_properties cp ON cp.molregno=m.id
   WHERE umbra_is_exact_match(m.umbra_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
-  GROUP BY m.umbra_mol, a.relation
-  ;
+  GROUP BY m.umbra_mol, a.relation;
 ┌───────────────────┬──────────────────┬──────────┬────────────────────────────┐
 │  avg(a."value")   │ count(a."value") │ relation │         umbra_mol          │
 │      double       │      int64       │ varchar  │          umbramol          │
@@ -354,13 +411,34 @@ Run Time (s): real 0.359 user 1.912700 sys 0.077231
 
 ```
 
-and the corresponding query yields in postgres
+Postgres control:
 
 ```sql
+
+chembl_33=# SELECT avg(a.value), count(a.value), a.relation, m.rdkit_mol FROM compound_structures m
+INNER JOIN activities a ON a.molregno=m.molregno
+INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+INNER JOIN compound_properties cp ON cp.molregno=m.molregno
+WHERE m.rdkit_mol@='CC(=O)Nc1nnc(S(N)(=O)=O)s1'
+GROUP BY m.rdkit_mol, a.relation;
           avg           | count | relation |         rdkit_mol
 ------------------------+-------+----------+----------------------------
  1630.14232821782178218 |  1818 | =        | CC(=O)Nc1nnc(S(N)(=O)=O)s1
+(1 row)
+
+Time: 900.934 ms
 ```
+
+The results are displayed together in the table below. The `real` run time
+is displayed in seconds for the standard method and the Umbra-mol method.
+Speedup is calculated by `standard method (s) / Umbra-mol (s)`
+
+| Query | Standard method (s) | Umbra-mol (s) | speedup |
+| ----- | ------------------- | ------------- | ------- |
+| 1     | 17.238              | 0.496         | 34.75x  |
+| 2     | 12.555              | 0.473         | 26.54x  |
+| 3     | 22.196              | 0.364         | 60.98x  |
+| 4     | 12.245              | 0.359         | 34.11x  |
 
 [1]: https://github.com/rvianello/chemicalite
 [2]: https://cedardb.com/blog/german_strings/
