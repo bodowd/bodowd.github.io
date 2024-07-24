@@ -12,6 +12,8 @@ extension and the RDkit SQLite extension, chemicalite [[1]].
 Here, I apply ideas from Umbra-style/German-style strings [[2]] to speed up
 exact search on molecules in duckdb by ~26-60x depending on the type of query.
 
+Jump to results: [results](#results)
+
 ### Umbra-style/German-style strings
 
 Umbra-style, or German-style strings, [[2]] is a string storage format that was introduced by Umbra [[3]]
@@ -428,6 +430,8 @@ GROUP BY m.rdkit_mol, a.relation;
 Time: 900.934 ms
 ```
 
+## <a name="results"></a>Results
+
 The results are displayed together in the table below. The `real` run time
 is displayed in seconds for the standard method and the Umbra-mol method.
 Speedup is calculated by `standard method (s) / Umbra-mol (s)`
@@ -443,3 +447,4 @@ Speedup is calculated by `standard method (s) / Umbra-mol (s)`
 [2]: https://cedardb.com/blog/german_strings/
 [3]: https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf
 [4]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
+[results]: https://github.com/bodowd/umbra-style-molecules
