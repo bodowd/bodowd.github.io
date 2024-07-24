@@ -132,6 +132,9 @@ struct umbra_mol_t {
 
 Then, to check if two molecules are an exact match, simply deserialize
 the `umbra_mol_t` and check the pre-calculated values.
+Only when the fast checks do not confirm that the molecules are unequal (meaning
+it is still possible the two molecules are the same),
+we can deserialize the binary molecule for the more expensive checks.
 
 ```cpp
 
