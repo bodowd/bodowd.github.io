@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Moleküle? Umbra-style strings applied to molecules speed up molecular equality searches in duckdb_rdkit
+title: Moleküle - Umbra-style/German-style strings applied to molecules speed up molecular equality searches in duckdb_rdkit
 description: ""
 summary: ""
 tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
