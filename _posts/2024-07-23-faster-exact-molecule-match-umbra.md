@@ -83,8 +83,7 @@ bool mol_cmp(const RDKit::ROMol &m1, const RDKit::ROMol &m2) {
 ```
 
 That algorithm takes two RDKit molecule objects, and then runs a series
-of inexpensive checks to start ruling out if two molecules could be an exact match -- a
-fail fast approach.
+of inexpensive checks to start ruling out if two molecules could be an exact match.
 For example, do the two molecules have the same number of atoms? If not, there
 is no way the two molecules are the same. Only after the inexpensive checks are
 done, more expensive checks like substructure searches and converting the molecule
@@ -114,7 +113,7 @@ applying the same idea from Umbra-style strings.
 ### Approach
 
 To implement this idea, I created a new struct to store the prefix, or header,
-containing the values that will be used for the "fail-fast" checks in front
+containing the values that will be used for the quick checks in front
 of the binary molecule object. Excerpts of the code are shown here for brevity.
 If you are interested in seeing more, please see the respository [[4]].
 
