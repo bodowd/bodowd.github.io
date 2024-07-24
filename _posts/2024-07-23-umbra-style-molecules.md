@@ -317,7 +317,7 @@ Time: 232944.928 ms (03:52.945)
 For these queries, I copied a few more tables from the chembl_33 postgres db into duckdb
 so that I can test how the performance is when joining tables.
 
-### Query 3;
+### Query 3:
 
 With the standard storage format and algorithm, it takes ~22 seconds.
 
