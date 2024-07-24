@@ -14,6 +14,8 @@ exact search on molecules in duckdb by ~26-60x depending on the type of query.
 
 Jump to results: [results](#results)
 
+Code: [code]
+
 ### Umbra-style/German-style strings
 
 Umbra-style, or German-style strings, [[2]] is a string storage format that was introduced by Umbra [[3]]
@@ -448,3 +450,4 @@ Speedup is calculated by `standard method (s) / Umbra-mol (s)`
 [3]: https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf
 [4]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
 [results]: https://github.com/bodowd/umbra-style-molecules
+[code]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
