@@ -83,32 +83,29 @@ bool mol_cmp(const RDKit::ROMol &m1, const RDKit::ROMol &m2) {
 ```
 
 That algorithm takes two RDKit molecule objects, and then runs a series
-of inexpensive checks to start ruling out if two molecules could be an exact match.
+of inexpensive checks to start ruling out molecules that cannot be a match and short-circuit
+before running more expensive checks.
 For example, do the two molecules have the same number of atoms? If not, there
 is no way the two molecules are the same. Only after the inexpensive checks are
 done, more expensive checks like substructure searches and converting the molecule
 to a RDKit canonicalized SMILES string are done.
 
-The molecules are stored in a binary format in the database, and then they need to
+The molecules are stored in a binary format in the database, and they need to
 be deserialized into RDKit molecule objects in order to access data like the
-number of atoms in the molecule, through the molecule object.
+number of atoms in the molecule.
 
-This first part of the equality check sounds exactly like the approach taken in
-Umbra-style strings, and so I wondered how the exact match would perform if I
-pre-calculate these simple values when the structures are loaded into the database,
-and then store these values alongside the serialized RDKit molecule object.
+I wondered how the exact match would perform if I
+pre-calculate and store these simple values when the structures are loaded into the database,
+which would allow short-circuiting without the deserialization of the binary molecule.
 This would be similar to the prefix idea of the Umbra-style strings.
+Assuming that the deserialization process is "slow" relative to the
+other operations that are carried out during the query execution, I thought this could
+provide a speedup.
 
 Although I did quick checks of how much time the deserialization process takes,
 I don't have any data to present which would compare the time deserialization takes relative
 to the other operations carried out by duckdb during query execution. That would be
 interesting to quantify though.
-
-Anyhow, my hypothesis was that by precalculating and storing these values, I could speed
-up the search. This assumes that the deserialization process is "slow" relative to the
-other operations that are carried out during the query execution. It would then
-be possible to skip the deserialization process to quickly rule out records -- basically
-applying the same idea from Umbra-style strings.
 
 ### Approach
 
