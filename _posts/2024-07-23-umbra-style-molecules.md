@@ -143,7 +143,7 @@ the next four bytes are `01 00 00 00` representing one bond in the molecule,
 etc. Then the sequence starting with `ef be ad de ...` is the binary format of
 the RDKit molecule.
 
-This is what will be stored in the database in an `UmbraMol` column in the duckdb_rdkit
+This is what will be stored in the database in a `UmbraMol` column in the duckdb_rdkit
 extension.
 
 Then, to check if two molecules are an exact match, simply deserialize
