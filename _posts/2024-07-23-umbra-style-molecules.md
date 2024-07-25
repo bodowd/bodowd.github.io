@@ -1,10 +1,12 @@
 ---
 layout: post
-title: Umbra-style/German-style strings ideas applied to molecules speed up exact match queries on molecules in duckdb_rdkit
+title: Umbra-style molecules
 description: ""
 summary: ""
 tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 ---
+
+Ideas from Umbra-style/German-style strings applied to molecules speed up exact match queries on molecules in duckdb_rdkit
 
 The current implementation of `is_exact_match` for finding molecules in duckdb_rdkit
 uses the standard molecule comparision algorithm found in the RDKit Postgres
