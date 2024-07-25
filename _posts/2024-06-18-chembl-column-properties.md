@@ -206,10 +206,11 @@ of interest in the context of this paper and analysis.
 I created a molecule object column with the RDKit Postgres extension
 in the `compound_structures` table in the database which contains chemical structures.
 I took a look at the size of these objects and found the max byte length for the
-molecules in that table was 15,762 and the min byte length was 65.
+molecules in that table was 15,762 the min byte length was 65, and the average was
+454.9 bytes.
 
-The max canonical SMILES (string representation) byte length was 2045 bytes, and
-min was 1, indicating that the molecule object is a lot bigger than the strings.
+The max canonical SMILES (string representation) byte length was 2045 bytes,
+the min was 1, and the average was 57, indicating that the molecule object is a lot bigger than the strings.
 That seems to make sense to me since there is a lot of information about the molecule's
 structure and properties in the molecule object.
 
