@@ -16,6 +16,10 @@ Jump to results: [results](#results)
 
 Code: [code]
 
+Hacker news discussion: [hn]
+
+- Thanks to dalke, who has given me helpful feedback and new ideas to look into
+
 ### Umbra-style/German-style strings
 
 Umbra-style, or German-style strings, [[2]] is a string storage format that was introduced by Umbra [[3]]
@@ -467,3 +471,4 @@ Speedup is calculated by `standard method (s) / Umbra-mol (s)`
 [4]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
 [results]: https://github.com/bodowd/umbra-style-molecules
 [code]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
+[hn]: https://news.ycombinator.com/item?id=41061014
