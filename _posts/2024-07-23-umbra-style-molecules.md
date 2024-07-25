@@ -134,6 +134,18 @@ struct umbra_mol_t {
 
 ```
 
+When serialized to binary, it becomes something like:
+
+`02 00 00 00 01 00 00 00 1e 00 00 00 00 00 00 00 41 00 00 00 ef be ad de 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 01 00 00 00 80 01 06 00 60 00 00 00 01 03 06 00 60 00 00 00 01 03 0b 00 01 00 14 00 00 00 00 17 04 00 00 00 00 00 00 00 16`
+
+for 'CC'. You can see the first four bytes are `02 00 00 00` representing two atoms,
+the next four bytes are `01 00 00 00` representing one bond in the molecule,
+etc. Then the sequence starting with `ef be ad de ...` is the binary format of
+the RDKit molecule.
+
+This is what will be stored in the database in an `UmbraMol` column in the duckdb_rdkit
+extension.
+
 Then, to check if two molecules are an exact match, simply deserialize
 the `umbra_mol_t` and check the pre-calculated values.
 Only when the fast checks do not confirm that the molecules are unequal (meaning
