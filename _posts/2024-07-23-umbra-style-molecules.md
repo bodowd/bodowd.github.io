@@ -175,7 +175,11 @@ bool umbra_mol_cmp(umbra_mol_t m1, umbra_mol_t m2) {
 
 ```
 
-That's the whole idea right there.
+In this way, the deserialization of the binary
+RDKit molecule can be done only if it is necessary.
+If most of the time there are not duplicate molecules,
+it would be unnecessary to deserialize the molecule
+object, and therefore hopefully this strategy reduces the execution time of the query.
 
 The additional code (like creating a new type, casts, and functions) required
 to implement this as a duckdb extension can be found in the
