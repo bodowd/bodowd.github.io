@@ -471,6 +471,5 @@ Speedup is calculated by `standard method (s) / Umbra-mol (s)`
 [2]: https://cedardb.com/blog/german_strings/
 [3]: https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf
 [4]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
-[results]: https://github.com/bodowd/umbra-style-molecules
 [code]: https://github.com/bodowd/duckdb_rdkit/tree/umbra-style-mol
 [hn]: https://news.ycombinator.com/item?id=41061014
