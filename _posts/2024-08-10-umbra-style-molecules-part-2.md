@@ -16,7 +16,7 @@ useful data into 12 bytes than the 20 bytes I used in the initial implementation
 Furthermore, I applied the second key idea from Umbra-style
 strings -- storing a pointer to the full binary molecule, rather than inlining
 it in the struct. This allowed for speedup of not only exact matches, but also
-enabled faster substructure matches when combined with a substructure filter developed by dalke.
+enabled faster substructure matches when combined with a substructure filter developed by Andrew Dalke.
 
 Here are the results, and I describe the process more below. You can
 jump to the experimental section here: [results](#results)
@@ -167,7 +167,7 @@ This results in a counts prefix that fits within 4 bytes.
 
 In order to short-circuit substructure matches, we need a way to rule out quickly
 that it is impossible for a query molecule to be a substructure of a target molecule.
-dalke has written about this in [2012]. Paraphrasing from dalke's article, this is
+Andrew Dalke has written about this in [2012]. Paraphrasing from Dalke's article, this is
 the idea:
 
 For example, we can have a bit vector, or molecular fingerprint, 1 for the presence of a chemical motif,
@@ -178,7 +178,7 @@ in the target, there is no way for a match.
 
 If the fragment exists in the target, but not in the query, it is still
 possible there is something else in the query that matches the target, because the common
-substructure is not captured in the fingerprint. An example from dalke's article:
+substructure is not captured in the fingerprint. An example from Dalke's article:
 "if "N" does not exist in the query then it might still match a target molecule
 which has an "N" in it. For example, the query "O" should still match the target
 "N#\[N+\]\[O-\]" (nitrous oxide)."
@@ -195,8 +195,8 @@ Thus, it is only possible to short-circuit in the false case, not in the
 true case with this substructure filter.
 
 The hardest part here is calculating a good set of fingerprints that can screen
-out a large portion of the dataset. Thankfully, dalke did the hard work and
-calculated a set of fingerprints 12 years ago, and I just used that. See [dalke's article] for the details of
+out a large portion of the dataset. Thankfully, Andrew Dalke did the hard work and
+calculated a set of fingerprints 12 years ago, and I just used that. See [Dalke's article] for the details of
 how this set is calculated.
 
 This set, which I call `dalke_fp` fits in 8 bytes, and I put that in the front
@@ -355,7 +355,7 @@ perform now that the binary molecule is not inlined into the `umbra_mol_t`.
 # <a name="results"></a>Experiments
 
 I made up some queries, and for substructure queries, I chose structures from a
-list of substructure queries gathered from real queries that dalke has
+list of substructure queries gathered from real queries that Andrew Dalke has
 shared [here](https://hg.sr.ht/~dalke/sqc/browse/README?rev=tip).
 
 The data set is from a Postgres dump of chembl33.
@@ -670,4 +670,4 @@ SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relatio
 [2012]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
 [55 bit]: https://www.mail-archive.com/rdkit-discuss@lists.sourceforge.net/msg02078.html
 [details here]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
-[dalke's article]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
+[Dalke's article]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
