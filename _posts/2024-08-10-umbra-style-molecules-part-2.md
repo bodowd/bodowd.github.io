@@ -11,9 +11,7 @@ tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 In part 1, I applied the prefix idea from Umbra-style strings to molecules and improved
 exact match queries via short-circuiting in a duckdb extension, duckdb_rdkit. I then tried to add
 more data to the prefix to also enable short-circuiting for substructure matches.
-This caused a degradation in exact match performance. Experiments suggested that
-execution time increased as the Umbra-mol struct got larger (more data in the prefix
-plus the binary molecule). Here in part 2, I improved the prefix by fitting more
+This caused a degradation in exact match performance. Here in part 2, I improved the prefix by fitting more
 useful data into 12 bytes than the 20 bytes I used in the initial implementation.
 Furthermore, I applied the second key idea from Umbra-style
 strings -- storing a pointer to the full binary molecule, rather than inlining
