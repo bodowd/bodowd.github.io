@@ -12,11 +12,13 @@ In part 1, I applied the prefix idea from Umbra-style strings to molecules and i
 exact match queries via short-circuiting in duckdb_rdkit. I then tried to add
 more data to the prefix to also enable short-circuiting for substructure matches.
 This caused a degradation in exact match performance. Experiments suggested that
-execution time increased as the Umbra-mol struct got larger (more in the prefix
-plus the binary molecule). Here in part 2, I applied the second key idea from Umbra-style
+execution time increased as the Umbra-mol struct got larger (more data in the prefix
+plus the binary molecule). Here in part 2, I improved the prefix by fitting more
+useful data into 12 bytes than the 20 bytes I used in the initial implementation.
+Furthermore, I applied the second key idea from Umbra-style
 strings -- storing a pointer to the full binary molecule, rather than inlining
 it in the struct. This allowed for speedup of not only exact matches, but also
-substructure matches when combined with a substructure filter developed by dalke.
+enabled substructure matches when combined with a substructure filter developed by dalke.
 
 Here are the results, and I describe the process more below:
 
@@ -42,31 +44,44 @@ Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit exte
 
 Duckdb is an in-process analytical database system, and I began experimenting with
 adding cheminformatic capabilities to duckdb as a duckdb extension. Initial experiments
-showed that exact match molecule queries were quite slow. I began to look into how
-to improve this performance, and was inspired by [Umbra-style strings], aka
-German-style strings, which is a string format adopted by many database systems,
-including duckdb.
+showed that exact match molecule queries were quite slow.
 
-A brief aside on OLAP vs OLTP and "did you try an index?":
-Online analytical processing (OLAP) database
-systems like duckdb typically do not use the indexes commonly found in online transactional
-processing (OLTP) databases (e.g. Postgres), like B-Trees. OLAP database systems are built for
-a different usecase than OLTP systems. For example, OLAP systems are optimized for
-aggregation queries, the types of queries where it needs to scan every record in order to compute
-a result, like taking an average of a column. Because OLAP systems solve for this
-type of scenario, there are other preferable optimizations that are available to OLAP systems
-due to some design decisions it takes. For example, probably all modern OLAP
-systems use column oriented storage instead of row oriented storage, and by doing so,
-it can allow for optimizations like zone maps where a min and max value of the
-column for that group of records can be checked during a scan -- if you are looking
-for the value 100 and that group of records has a max value of 10, you can skip
-over that whole group. This is a very insufficient discussion on OLTP vs OLAP, but
-hopefully that gives some context. I recommend the database system courses available
+If you aren't familiar with OLAP and OLTP, I'll try give a brief, brief intro.
+Online transactional processing (OLTP) databases are optimized for workloads
+that require point lookups. These workloads may just want to access one or
+few records in the database, like adding a molecule to the
+database, adding some assay result for that molecule, or finding out what assays
+were run on that molecule, for example.
+Online analytical processing (OLAP) databases are optimized for workloads that
+need to touch many or all records, like aggregation queries where you want to
+compute an average for a column.
+
+There's a lot to say about the strategies employed by OLAP systems, but I will
+just touch on one part because the question may arise in relation to the topic
+of this post: "did you try using an index to speed up the searches?"
+
+OLAP database systems like duckdb typically do not use the indexes commonly found in
+OLTP databases (e.g. Postgres), like B-Trees. B-Trees are very powerful for getting
+in and out fast to find the record you're interested in -- point lookups.
+However, B-Trees may not be a good fit for OLAP workloads where the system may need to scan
+all the records to find an answer to your query, or for bulk updates where the overhead
+of maintaining a B-Tree is too expensive.
+
+There are many interesting strategies OLAP systems employ to make full table
+scans really fast. These strategies connect to one another and touch on
+many different parts of the database system, from the storage format
+(columnar format instead of row-wise) to the query execution engine
+(vectorized instead of tuple at a time). I recommend the database systems courses available
 on Youtube by the professors at CMU, if you are interested in more information.
 
-Back to the Umbra-style strings: There are two key ideas that I applied from the
-Umbra-style strings. A short prefix for short-circuting comparisons, and storing
-a pointer to a string, rather than inlining the string into the in-memory representation.
+That being said, what strategies can be employed to speed up these cheminformatic comparisons,
+in duckdb?
+
+I began to look into how to improve this performance, and was inspired by [Umbra-style strings], aka
+German-style strings, which is a string format adopted by several data processing
+systems, including duckdb. There are two key ideas that I applied from
+Umbra-style strings to molecules: a prefix for short-circuting comparisons, and storing
+a pointer to a string rather than inlining the string in the in-memory representation.
 
 Molecule comparison is more complicated than strings ([learn more here]), but
 the idea of short-circuiting comparisons is not a new one for molecule searches, and
@@ -75,78 +90,86 @@ I thought the ideas from Umbra-style strings could be translated to molecules.
 In my [intial attempt] with "Umbra-mols", I applied only the prefix idea. I
 followed previous examples from [chemicalite] and the [RDKit Postgres extension],
 and used counts like the number of atoms, bonds, etc. which are cheap to
-compute and small to store, in order to short-circuit the comparison function.
-If two molecules have a different
-number of atoms, they cannot be the same molecule. This gave a huge improvement
-in exact match comparisons, achieving up to 60x speedup over the "standard"
-implementation without a prefix for short-circuiting.
+compute and store. I put these counts in a prefix, and compared the prefixes of
+two molecules to bail out of the function early if the prefixes did not match.
+If two molecules have different number of atoms, they cannot be the same molecule.
+This gave a huge improvement in exact match comparisons, achieving up to 60x speedup
+over the "standard" implementation without a prefix in some simple experiments
+I did.
 
-Processing a molecule involves first parsing some kind of molecular format into
-a RDKit molecule object, and then serializing that object to binary;
+Processing a molecule involves first parsing some kind of string molecular format into
+a RDKit molecule object. Then to store this data, it needs to be serialized to binary.
 SMILES -> RDKit Molecule object -> serialize to binary (binary molecule)
+To do cheminformatic work on this stored molecule, we need to deserialize the
+binary into the in-memory RDKit Molecule object.
 
-These intial results with Umbra-mols suggested that the deserialization of the
-binary molecule is very expensive, and that really adds up in an OLAP system
-where the system scans the entire column of that table.
-In the "standard" method, we would deserialize, for every molecule,
-the binary representation of a molecule into the in-memory representation, and then
-get things like atom count, etc. and short-circuit at that point. With the Umbra-mol
-we pre-calculate these counts since we have to go through an RDKit molecule
-representation anyways, and store that in front of the binary molecule. Then
-when pulling the binary molecule out of the disk, we have the counts available, and
-only deserialize the binary molecule when the counts cannot rule out that the molecules
-are different.
+The prefix sits in front of a binary molecule object, like so:
+
+```
+| 4 bytes - number of atoms | 4 bytes - number of bonds | 4 bytes - amw | 4 bytes - number of rings | 4 bytes - size of the binary molecule | n bytes - binary molecule |
+```
+
+The initial experiments suggested that this deserialization process is very expensive,
+especially in an OLAP scenario where the full column is being scanned. Every
+binary molecule would be deserialized in order to do even the inexpensive comparisons.
+The reason the prefix and short-circuit mechanism is so powerful is because it allows
+the system to save time by avoiding this deserialization. Only when the prefixes match,
+deserializing the binary molecule is necessary to do further checks.
 
 After sharing these results, user dalke on Hacker News gave me some great new ideas
-to explore.
+to explore. As I worked on these new ideas, it exposed limitations of the first
+implementation. More experiments suggested it was the size of Umbra-mol in-memory representation.
+And that led me to explore how to implement the second key idea from Umbra-style strings:
+store a pointer to the string rather than inlining the string into the struct.
 
-To summarize my follow up experiments:
-
-- First, I could shrink the counts prefix alot. I did an analysis of the chembl
-  database molecules, and found that the distribution for some of these properties
-  were extremely skewed and that I could capture 99% of the dataset with much smaller
-  integer representations [see supplementary - 99th percentile](#99percentile).
-  Ultimately, I was able to shrink my intial 20-byte prefix to 4-bytes.
-
-- I tried to extend the Umbra-mol prefix to include a small fingerprint that could be used
-  to short-circuit substructure matches, a substructure filter. I learned that this is
-  and idea that dalke and others have thought about at least since [2012].
-  I used the same [55 bit] fingerprint that dalke calculated ([details here])
-  and that Greg at RDKit experimented with, and put that in the Umbra-mol prefix.
-  However, this started to degrade the exact match performance a lot.
-  Some queries that executed in < 1 sec were now taking > 5 sec.
-
-- More experiments suggested it was the size of Umbra-mol in-memory representation.
-  And that led me to explore how to implement the second key idea from Umbra-style strings:
-  store a pointer to the string rather than inlining the string into the struct.
+<!-- To summarize my follow up experiments: -->
+<!---->
+<!-- - First, I was able to squeeze the counts prefix into 4-bytes. -->
+<!--   My initial attempt used 20 bytes for the prefix.
+<!---->
+<!-- - I tried to extend the Umbra-mol prefix to include a small fingerprint that could be used -->
+<!--   to short-circuit substructure matches, a substructure filter. I learned that this is -->
+<!--   and idea that dalke and others have thought about at least since [2012]. -->
+<!--   I used the same [55 bit] fingerprint that dalke calculated ([details here]) -->
+<!--   and that Greg at RDKit experimented with, and put that in the Umbra-mol prefix. -->
+<!--   However, this started to degrade the exact match performance a lot. -->
+<!--   Some queries that executed in < 1 sec were now taking > 5 sec. -->
 
 # Improvements to the first attempt at Umbra-mol
 
 ## Prefix improvements
 
 I shrank the counts prefix used for short-circuiting exact match comparisons, and
-add `dalke_fp`, a set of fingerprints that dalke calculated, for short-circuiting
+added `dalke_fp`, a set of fingerprints that dalke calculated, for short-circuiting
 substructure matches.
 
 ### Counts prefix for short-circuiting exact match comparisons
 
 Initially I just used 4 bytes for each field of the counts properties that are used
-for short-circuting the exact match comparisons. I found most property values
-are not so large, and 99% of values in some fields could be represented with
-just a few bits.
+for short-circuting the exact match comparisons forming a 20 byte prefix.
+I did an analysis of the chembl
+database molecules, found that the distribution for some of these properties
+were extremely skewed, and that I could capture 99% of the dataset with much smaller
+integer representations because the values are not very large [see supplementary - 99th percentile](#99percentile).
+For example, 99% of the molecules have less than 8 rings, so I could just
+use 3 bits for that.
 
-Here is how the new prefix looks like:
+Using the chembl analysis as a guide, here is how the new counts prefix looks like:
 
 - number of atoms, 7 bits
 - number of bonds, 6 bits
 - number of rings, 3 bits
 - amw, 11 bits
 
-Any molecules that come in with values larger than can be represented by the allotted
-bits are simply capped at the max value for that number of bits. Any collisions with
-other molecules is ok, it's just for short-circuiting comparisons, not creating
-cryptographic hashes, and since 99% of molecules will fit in these allotted bits,
-the number of collisions are expected to be small.
+Any molecules that come in with values larger than the allotted
+bits can represent are simply capped at the max value for that number of bits.
+Any collisions with
+other molecules is ok because it's just for short-circuiting comparisons, not creating
+cryptographic hashes, and since these bits cover 99% of the values they are
+responsible for,
+the number of collisions due to being capped are expected to be small.
+
+This results in a counts prefix that fits within 4 bytes.
 
 ### dalke_fp as a substructure filter
 
@@ -155,29 +178,33 @@ that it is impossible for a query molecule to be a substructure of a target mole
 dalke has written about this in [2012]. Paraphrasing from dalke's article, this is
 the idea:
 
-If the fragment exists in the query but not in the target,
-there is no way for a match.
+For example, we can have a bit vector, or molecular fingerprint, 1 for the presence of a chemical motif,
+and 0 when absent.
+
+If the fragment exists in the query but not in the target, so 1 in the query, 0
+in the target, there is no way for a match.
 
 If the fragment exists in the target, but not in the query, it is still
-possible there is something in the query that matches the target, because the common
-substructure is not captured in the dalke fingerprint. An example from dalke's article:
+possible there is something else in the query that matches the target, because the common
+substructure is not captured in the fingerprint. An example from dalke's article:
 "if "N" does not exist in the query then it might still match a target molecule
 which has an "N" in it. For example, the query "O" should still match the target
 "N#\[N+\]\[O-\]" (nitrous oxide)."
 
-If all fragments that are on in the query are also on in the target,
-it also does not mean that the query is a substructure. It is possible
-that there is something present in the query not captured in the fingerprint,
-but not in the target. For example,
-if the query has NCCCCCCCC, and the target has the N bit set,
-it could be that the target is only NC, and this is not a substructure match.
+If all fragments that have on bits in the query are also on in the target,
+it does not mean that the query is a substructure. It is possible
+that there is something present in the query not captured by the fingerprint,
+but not in the target. For example, if the target is "NC", and the query is
+"NCCCCCCCC", and the fingerprint only accounts for the presence of "N", both
+the query and target would have the bit corresponding to "N" set, but the query
+is not a substructure of the target.
 
 Thus, it is only possible to short-circuit in the false case, not in the
 true case with this substructure filter.
 
 The hardest part here is calculating a good set of fingerprints that can screen
-out a large portion of the dataset. So, I just took what dalke calculated years ago
-and built a bit vector out of that. See [dalke's article] for the details of
+out a large portion of the dataset. dalke calculated a set of fingerprints in
+some experiments years ago, and I just used that. See [dalke's article] for the details of
 how this set is calculated.
 
 This set, which I call `dalke_fp` fits in 8 bytes, and I put that in the front
@@ -188,10 +215,19 @@ the counts prefix is unnecessary, and the prefix could be shrunk to 8 bytes.
 
 ## Storing a pointer to the binary molecule
 
-This is the second key idea of Umbra-style strings.
+The second key idea of Umbra-style strings is to store a pointer to the string
+rather than inlining the string. Likewise, in this work I store a pointer to the entire
+Umbra Mol which has the binary molecule.
 
 My initial attempt inlined the binary molecule in the struct, and that takes up
 a lot of space (most binary molecules are over 1,000 bytes [supplementary figure](#99percentile).)
+Then when I tried putting the dalke_fp in the prefix, I started to see degradation
+of the exact match performance. Some queries that executed in < 1 sec when
+the prefix was only counts, were now taking > 5 sec. I did some experiments
+that suggested the data per Umbra Mol was getting too big. Because the binary
+molecule is inlined, it is being pushed around the system even though it is
+not always needed if the prefix enables a short-circuit.
+
 In Umbra-style strings they store a pointer to the string, if it is a "long" string.
 Here is the struct of the `string_t` type in duckdb's string implementation.
 
@@ -214,9 +250,10 @@ Here is the struct of the `string_t` type in duckdb's string implementation.
 If the pointer is stored, then there is a further step of pointer swizzling that needs
 to take place. We need a way to translate that pointer
 to a memory address to something that can point to an offset somewhere on disk when
-the data is moving between disk and memory. I guessed that this is probably very closely tied to
+the data moves from memory to disk, and vice versa. I assume that this process is
+probably very closely tied to
 rest of the duckdb internals like the buffer pool and storage format, and I wasn't sure
-if I could access those internals from an extension in order to do pointer swizzling.
+if I could alter those internals from an extension in order to do pointer swizzling.
 
 I wanted to see how duckdb did this for the `string_t` type, and I asked the
 duckdb Discord channel to see if someone could give me a suggestion
@@ -236,7 +273,7 @@ in my code is called, and `string_t` is the size of the prefix; I want to store
 more data in the prefix than the 4 bytes in `string_t`
 
 Converting an Umbra-mol to `string_t` wasn't really much of a conversion at all.
-I simply made the calculations for the prefixes, and packed it into a `std::string` with the
+I simply made the calculations for the prefixes, and packed it into a `std::string` along with the
 binary molecule at the end, and then passed that to a `string_t`
 constructor.
 
@@ -256,10 +293,9 @@ constructor.
 
 ```
 
-Duckdb's `string_t` implementation does the rest; it copies the first
-4 bytes to a prefix, stores a pointer to the the entire string, and when it goes
+Duckdb's `string_t` implementation does the rest. When it goes
 to and from disk, all the swizzling, unswizzling, and other complicated tasks are
-taken care of.
+taken care of by duckdb since it just sees a `string_t`.
 
 Converting from a `string_t` to `umbra_mol_t` was also rather straightforward,
 after I figured out all my pointer reference errors:
@@ -297,7 +333,8 @@ the first 12 bytes (more on the prefix in the next section) into the `prefix`
 field, and then simply set the pointer in `umbra_mol_t` to the pointer in
 `string_t` that points to the binary molecule.
 
-To get the binary molecule for other functions, I can copy the bytes that
+To get the binary molecule for when further calculations need to be made because
+the prefix cannot short-circuit the comparisons, I can copy the bytes that
 follow the prefix.
 
 ```c++
@@ -314,13 +351,17 @@ follow the prefix.
 
 ```
 
+The process is then:
+binary data string with the data of
+an Umbra-mol -> `string_t` -> duckdb internals -> `string_t` -> `umbra_mol_t`
+
 Now with all the pieces in place, let's see how exact and substructure matches
 perform now that the binary molecule is not inlined into the `umbra_mol_t`.
 
 # Experiments:
 
-I made up some queries and arbitrarily picked molecules to look for.
-I chose from a list of substructure queries gathered from real queries that dalke has
+I made up some queries, and for substructure queries, I chose structures from a
+list of substructure queries gathered from real queries that dalke has
 shared [here](https://hg.sr.ht/~dalke/sqc/browse/README?rev=tip).
 
 ## Exact match
@@ -336,7 +377,7 @@ Queries are shown in [supplementary 1](#supplementary1).
 
 ## Substructure match
 
-Queries are shown in [supplementary 2].
+Queries are shown in [supplementary 2](#supplementary2).
 
 | Query | Standard method (s) | Umbra-mol part 2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
 | :---- | :------------------ | :------------------- | :------------------------------------- | :------------------- |
@@ -345,27 +386,43 @@ Queries are shown in [supplementary 2].
 | 3     | 14.294              | 0.553                | 26x                                    | 12.114               |
 | 4     | 13.994              | 6.804                | 2x                                     | 1237 (20 min)        |
 
-Note on query 4: I am detecting more matches (16,543 vs 16,165) in the duckdb queries.
+Note on query 4: I am detecting more matches (16,543 vs 16,165) in the duckdb queries
+than with the Postgres RDKit extension.
 I get the same values for the standard method and the Umbra-mol which suggests
 that the prefix is not causing the behavior. It might be that I have some different
 parameters for the `RDKit::SubstructMatch` function, but I tried with the same
 parameters as I found in the Postgres RDKit extension code, as well as with chemicalite
 (I am following the chemicalite parameters for now), and that didn't solve the
-discrepency. The code I'm using in duckdb_rdkit seems to get more substructure
-matches. I don't know if these are false positives, or if the Postgres RDKit extension
+discrepency. I don't know if these are false positives, or if the Postgres RDKit extension
 gets false negatives. I have no idea what is the reason,
-and I only observe this behavior for this query so far.
+and I only observe this behavior for this query so far. All the other queries I tried
+did not exhibit this behavior.
+
+# Conclusion
 
 Storing the pointer to the entire binary molecule rather than inlining the
 data into the `umbra_mol_t` struct has a massive effect on performance.
-With my intial attempt, which kept an inlined binary molecule in the struct,
-I was seeing near 20 sec execution times on Substructure match Queries 1 and 2
-Storing a pointer to the binary molecule drops those down to 0.267 and ~6 seconds!
+It also enables the Umbra-mol to pack more useful data into the prefix to
+also improve substructure searches.
 
-In the substructure matches, the structure has a big effect on the execution time;
+My initial attempt, kept an inlined binary molecule in the struct.
+I was seeing > 10 sec execution times on Substructure match Queries 1 and 2 even
+with the `dalke_fp` in the prefix for short-circuiting.
+Storing a pointer to the binary molecule drops those down to 0.267 and ~6 seconds
+respectively! For exact matches, I saw improvements of ~26-60x on exact match queries over the
+standard, non-prefixed, implementation. With the pointer to the binary molecule,
+I see 48x-96x speedups, all while having more useful information in the prefix.
+
+The `dalke_fp` seems very effective for short-circuiting, but it also depends on
+the molecules. In the limited samples I tried, I found for some substructures the
+`dalke_fp` could short-circuit all but ~400 molecules out of ~2.7 million molecules.
+That means the vast majority of that search did not even need to dereference the pointer
+to the binary molecule nor deserialize it.
+
+In the substructure matches, the query structure has a big effect on the execution time;
 the more general the query structure is, the more that it will match molecules in
 the database. Since there are many matches, the full deserialization and substructure
-needs to be done to confirm the match. The rarer the query substructure is, the more
+match needs to be done to confirm the match. The rarer the query substructure is, the more
 the prefix will enable the function to bail out early, and the faster the query will
 be.
 
@@ -609,72 +666,3 @@ SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relatio
 [55 bit]: https://www.mail-archive.com/rdkit-discuss@lists.sourceforge.net/msg02078.html
 [details here]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
 [dalke's article]: http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
-
-<!---->
-<!-- - Added some print statements to see if this function gets called when -->
-<!--   running operations of VARCHAR data when running duckdb with a file attached -->
-<!-- - Idea: since it's all just binary data in the end, convert to `string_t` so that -->
-<!--   duckdb can handle pointer swizzling. When bringing the data into memory, convert -->
-<!--   from `string_t` to an UmbraMol, `umbra_mol_t`. The main difference between the -->
-<!--   two types is the size of the prefix. Then, set the `umbra_mol_t` pointer to the -->
-<!--   `string_t` pointer to the data. -->
-<!---->
-<!-- Store the data in a pointer. Convert to and from string_t and let duckdb -->
-<!-- handle the pointer swizzling. -->
-<!---->
-<!-- With just count prefix in the string_t. -->
-<!---->
-<!-- Exact match queries -->
-<!---->
-<!-- <!-- | Query | Standard method (s) | Umbra-mol 20-byte prefix (s) | Umbra-mol 10-byte prefix (s) | Umbra-mol as string_t (s) | Postgres control (s) | --> -->
-<!-- <!-- | :---- | :------------------ | :--------------------------- | :--------------------------- | :------------------------ | :------------------- | --> -->
-<!-- <!-- | 1     | 17.238              | 0.496                        | 0.311                        | 0.141                     | 0.084                | --> -->
-<!-- <!-- | 2     | 12.555              | 0.473                        | 0.273                        | 0.103                     | 233                  | --> -->
-<!-- <!-- | 3     | 22.196              | 0.364                        | 0.592                        | 0.240                     | 0.162                | --> -->
-<!-- <!-- | 4     | 12.245              | 0.359                        | 0.350                        | 0.217                     | 0.900                | --> -->
-<!---->
-<!-- | Query | Standard method (s) | Umbra-mol 20-byte prefix (s) | Umbra-mol as string_t (s) | Speedup (string_t vs standard method) | -->
-<!-- | :---- | :------------------ | :--------------------------- | :------------------------ | :------------------------------------ | -->
-<!-- | 1     | 17.238              | 0.496                        | 0.141                     | 122x                                  | -->
-<!-- | 2     | 12.555              | 0.473                        | 0.103                     | 122x                                  | -->
-<!-- | 3     | 22.196              | 0.364                        | 0.240                     | 92x                                   | -->
-<!-- | 4     | 12.245              | 0.359                        | 0.217                     | 56x                                   | -->
-<!---->
-<!-- With counts + dalke fingerprints (12 byte prefix) -->
-<!---->
-<!-- Exact matches: -->
-<!---->
-<!-- | Query | Standard method (s) | Umbra-mol 20-byte prefix (s) | Umbra-mol (12 byte count + dalke fp) (s) | Postgres control (s) | -->
-<!-- | :---- | :------------------ | :--------------------------- | :--------------------------------------- | :------------------- | -->
-<!-- | 1     | 17.238              | 0.496                        | 0.211                                    | 0.084                | -->
-<!-- | 2     | 12.555              | 0.473                        | 0.175                                    | 233                  | -->
-<!-- | 3     | 22.196              | 0.364                        | 0.699                                    | 0.162                | -->
-<!-- | 4     | 12.245              | 0.359                        | 0.351                                    | 0.900                | -->
-<!---->
-<!-- Substructure matches: -->
-<!---->
-<!-- | Query | Standard method (s) | Umbra-mol 10-byte prefix + dalke fp (s) | Umbra-mol (12-byte count + dalke fp) (s) | Postgres (s) | -->
-<!-- | :---- | :------------------ | :-------------------------------------- | :--------------------------------------- | ------------ | -->
-<!-- | 1     | 14.487              | 19.95                                   | 8.904                                    | 130.59       | -->
-<!-- | 2     | 13.96               | 19.47                                   | 0.768                                    | 1.6          | -->
-<!---->
-<!-- ```sql -->
-<!-- SELECT umbra_mol from molecule where umbra_is_substruct(umbra_mol, 'O=CNCCc1ccccc1'); -->
-<!-- ``` -->
-<!---->
-<!-- 133531 molecules. 9.061 seconds -->
-<!---->
-<!-- ```sql -->
-<!-- SELECT rdkit_mol from molecule where is_substruct(rdkit_mol, 'O=CNCCc1ccccc1'); -->
-<!-- ``` -->
-<!---->
-<!-- 133531 molecules. 16.374 seconds -->
-<!---->
-<!-- postgres -->
-<!---->
-<!-- ```sql -->
-<!-- select rdkit_mol from compound_structures where rdkit_mol@>'O=CNCCc1ccccc1'; -->
-<!-- ``` -->
-<!---->
-<!-- 133531 molecules. 143 seconds. -->
-<!---->
