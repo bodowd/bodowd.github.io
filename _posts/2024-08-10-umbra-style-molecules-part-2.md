@@ -9,7 +9,7 @@ tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
 # Abstract
 
 In part 1, I applied the prefix idea from Umbra-style strings to molecules and improved
-exact match queries via short-circuiting in duckdb_rdkit. I then tried to add
+exact match queries via short-circuiting in a duckdb extension, duckdb_rdkit. I then tried to add
 more data to the prefix to also enable short-circuiting for substructure matches.
 This caused a degradation in exact match performance. Experiments suggested that
 execution time increased as the Umbra-mol struct got larger (more data in the prefix
