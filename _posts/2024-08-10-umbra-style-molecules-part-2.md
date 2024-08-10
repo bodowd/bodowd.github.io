@@ -107,7 +107,8 @@ SMILES -> RDKit Molecule object -> serialize to binary (binary molecule)
 To do cheminformatic work on this stored molecule, we need to deserialize the
 binary into the in-memory RDKit Molecule object.
 
-The prefix sits in front of a binary molecule object, like so in my initial attempt:
+The prefix sits in front of a binary molecule object, and my first attempt used
+4 bytes per field.
 
 ```
 | 4 bytes - number of atoms | 4 bytes - number of bonds | 4 bytes - amw | 4 bytes - number of rings | 4 bytes - size of the binary molecule | n bytes - binary molecule |
