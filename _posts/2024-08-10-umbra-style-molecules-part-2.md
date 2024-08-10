@@ -123,22 +123,9 @@ deserializing the binary molecule is necessary to do further checks.
 
 After sharing these results, user dalke on Hacker News gave me some great new ideas
 to explore. As I worked on these new ideas, it exposed limitations of the first
-implementation. More experiments suggested it was the size of Umbra-mol in-memory representation.
+implementation. More experiments suggested it was the size of the Umbra-mol in-memory representation.
 And that led me to explore how to implement the second key idea from Umbra-style strings:
 store a pointer to the string rather than inlining the string into the struct.
-
-<!-- To summarize my follow up experiments: -->
-<!---->
-<!-- - First, I was able to squeeze the counts prefix into 4-bytes. -->
-<!--   My initial attempt used 20 bytes for the prefix.
-<!---->
-<!-- - I tried to extend the Umbra-mol prefix to include a small fingerprint that could be used -->
-<!--   to short-circuit substructure matches, a substructure filter. I learned that this is -->
-<!--   and idea that dalke and others have thought about at least since [2012]. -->
-<!--   I used the same [55 bit] fingerprint that dalke calculated ([details here]) -->
-<!--   and that Greg at RDKit experimented with, and put that in the Umbra-mol prefix. -->
-<!--   However, this started to degrade the exact match performance a lot. -->
-<!--   Some queries that executed in < 1 sec were now taking > 5 sec. -->
 
 # Improvements to the first attempt at Umbra-mol
 
