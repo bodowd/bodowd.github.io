@@ -99,11 +99,15 @@ I did.
 
 Processing a molecule involves first parsing some kind of string molecular format into
 a RDKit molecule object. Then to store this data, it needs to be serialized to binary.
+
+```
 SMILES -> RDKit Molecule object -> serialize to binary (binary molecule)
+```
+
 To do cheminformatic work on this stored molecule, we need to deserialize the
 binary into the in-memory RDKit Molecule object.
 
-The prefix sits in front of a binary molecule object, like so:
+The prefix sits in front of a binary molecule object, like so in my initial attempt:
 
 ```
 | 4 bytes - number of atoms | 4 bytes - number of bonds | 4 bytes - amw | 4 bytes - number of rings | 4 bytes - size of the binary molecule | n bytes - binary molecule |
