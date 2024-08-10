@@ -87,7 +87,7 @@ Molecule comparison is more complicated than strings ([learn more here]), but
 the idea of short-circuiting comparisons is not a new one for molecule searches, and
 I thought the ideas from Umbra-style strings could be translated to molecules.
 
-In my [intial attempt] with "Umbra-mols", I applied only the prefix idea. I
+In my intial attempt with "Umbra-mols" (see [part 1]), I applied only the prefix idea. I
 followed previous examples from [chemicalite] and the [RDKit Postgres extension],
 and used counts like the number of atoms, bonds, etc. which are cheap to
 compute and store. I put these counts in a prefix, and compared the prefixes of
@@ -658,7 +658,7 @@ SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relatio
 
 [Umbra-style strings]: https://cedardb.com/blog/german_strings/
 [learn more here]: https://depth-first.com/articles/2019/04/12/the-smiles-substructure-search-fallacy/
-[initial attempt]: https://bodowd.github.io/2024/07/23/umbra-style-molecules
+[part 1]: https://bodowd.github.io/2024/07/23/umbra-style-molecules
 [chemicalite]: https://github.com/rvianello/chemicalite
 [RDKit]: https://www.rdkit.org/docs/Overview.html
 [RDKit Postgres extension]: https://www.rdkit.org/docs/Cartridge.html
