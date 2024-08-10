@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Umbra-style molecules
+title: Umbra-style molecules - part 1
 description: ""
 summary: ""
 tags: [chembl, chemistry, rdkit, databases, duckdb, umbra]
