@@ -18,7 +18,8 @@ strings -- storing a pointer to the full binary molecule, rather than inlining
 it in the struct. This allowed for speedup of not only exact matches, but also
 enabled faster substructure matches when combined with a substructure filter developed by dalke.
 
-Here are the results, and I describe the process more below:
+Here are the results, and I describe the process more below. You can
+jump to the experimental section here: [results](#results)
 
 Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
@@ -351,7 +352,7 @@ an Umbra-mol -> `string_t` -> duckdb internals -> `string_t` -> `umbra_mol_t`
 Now with all the pieces in place, let's see how exact and substructure matches
 perform now that the binary molecule is not inlined into the `umbra_mol_t`.
 
-# Experiments:
+# <a name="results"></a>Experiments
 
 I made up some queries, and for substructure queries, I chose structures from a
 list of substructure queries gathered from real queries that dalke has
