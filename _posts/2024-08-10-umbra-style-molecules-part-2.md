@@ -357,6 +357,17 @@ I made up some queries, and for substructure queries, I chose structures from a
 list of substructure queries gathered from real queries that dalke has
 shared [here](https://hg.sr.ht/~dalke/sqc/browse/README?rev=tip).
 
+The data set is from a Postgres dump of chembl33.
+The chembl33 has a column for RDKit molecules, and it has a gist index on it, as
+described in the RDKit Postgres extension docs.
+
+The standard method is just the binary molecule object, no prefix for short circuiting.
+All comparisons require deserialization of the molecule and then calculations
+are performed on the RDKit molecule object.
+
+Umbra-mol part 2 represents the Umbra-mol implementation as described above in
+this post.
+
 ## Exact match
 
 Queries are shown in [supplementary 1](#supplementary1).
