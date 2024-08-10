@@ -195,8 +195,8 @@ Thus, it is only possible to short-circuit in the false case, not in the
 true case with this substructure filter.
 
 The hardest part here is calculating a good set of fingerprints that can screen
-out a large portion of the dataset. dalke calculated a set of fingerprints in
-some experiments years ago, and I just used that. See [dalke's article] for the details of
+out a large portion of the dataset. Thankfully, dalke did the hard work and
+calculated a set of fingerprints 12 years ago, and I just used that. See [dalke's article] for the details of
 how this set is calculated.
 
 This set, which I call `dalke_fp` fits in 8 bytes, and I put that in the front
@@ -208,20 +208,21 @@ the counts prefix is unnecessary, and the prefix could be shrunk to 8 bytes.
 ## Storing a pointer to the binary molecule
 
 The second key idea of Umbra-style strings is to store a pointer to the string
-rather than inlining the string. Likewise, in this work I store a pointer to the entire
-Umbra Mol which has the binary molecule.
+rather than inlining the string. Likewise, in this work I store a pointer to the binary molecule.
 
 My initial attempt inlined the binary molecule in the struct, and that takes up
 a lot of space (most binary molecules are over 1,000 bytes [supplementary figure](#99percentile).)
 Then when I tried putting the dalke_fp in the prefix, I started to see degradation
 of the exact match performance. Some queries that executed in < 1 sec when
-the prefix was only counts, were now taking > 5 sec. I did some experiments
-that suggested the data per Umbra Mol was getting too big. Because the binary
+the prefix was only counts, were now taking > 5 sec. Some experiments got me thinking
+about the inlined binary molecule. Because the binary
 molecule is inlined, it is being pushed around the system even though it is
 not always needed if the prefix enables a short-circuit.
 
 In Umbra-style strings they store a pointer to the string, if it is a "long" string.
-Here is the struct of the `string_t` type in duckdb's string implementation.
+Here is the struct of the `string_t` type in duckdb's string implementation. Only
+when a prefix is unable to provide the answer a query seeks, the pointer is de-referenced
+and the full string is used.
 
 ```c++
 
@@ -262,7 +263,7 @@ With this in mind, my idea was that if I can translate my Umbra-mol to a `string
 then the heavy lifting would be done by duckdb. After all it's all just binary
 data. The main difference between the Umbra-mol, or `umbra_mol_t` as the struct
 in my code is called, and `string_t` is the size of the prefix; I want to store
-more data in the prefix than the 4 bytes in `string_t`
+more data in the prefix than the 4 bytes in `string_t` uses.
 
 Converting an Umbra-mol to `string_t` wasn't really much of a conversion at all.
 I simply made the calculations for the prefixes, and packed it into a `std::string` along with the
@@ -320,13 +321,14 @@ This constructor is used to convert a `string_t` to an `umbra_mol_t`:
 
 ```
 
-Just copy the length (this is the prefix + binary molecule), and then copy
-the first 12 bytes (more on the prefix in the next section) into the `prefix`
+Just copy the length (this is the prefix + binary molecule), then copy
+the first 12 bytes into the `prefix`
 field, and then simply set the pointer in `umbra_mol_t` to the pointer in
 `string_t` that points to the binary molecule.
 
-To get the binary molecule for when further calculations need to be made because
-the prefix cannot short-circuit the comparisons, I can copy the bytes that
+To get the binary molecule when
+the prefix cannot short-circuit the comparisons and further calculations on the
+RDKit molecule need to be made, I can copy the bytes that
 follow the prefix.
 
 ```c++
