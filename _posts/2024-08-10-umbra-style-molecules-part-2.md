@@ -20,23 +20,23 @@ substructure matches when combined with a substructure filter developed by dalke
 
 Here are the results, and I describe the process more below:
 
-Exact match experiments:
+Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
-| Query | Standard method (s) | Umbra-mol part 2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :------------------ | :------------------- | :------------------------------------- | :------------------- |
-| 1     | 17.238              | 0.179                | 96x                                    | 0.084                |
-| 2     | 12.555              | 0.145                | 87x                                    | 233                  |
-| 3     | 13.027              | 0.263                | 50x                                    | 2.47                 |
-| 4     | 12.245              | 0.255                | 48x                                    | 6.185                |
+| Query | Standard (s) | Umbra-mol (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
+| :---- | :----------- | :------------ | :------------------------------------- | :------------------- |
+| 1     | 17.238       | 0.179         | 96x                                    | 0.084                |
+| 2     | 12.555       | 0.145         | 87x                                    | 233                  |
+| 3     | 13.027       | 0.263         | 50x                                    | 2.47                 |
+| 4     | 12.245       | 0.255         | 48x                                    | 6.185                |
 
-Substructure match experiments:
+Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
-| Query | Standard method (s) | Umbra-mol part 2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :------------------ | :------------------- | :------------------------------------- | :------------------- |
-| 1     | 23.388              | 0.267                | 88x                                    | 0.741                |
-| 2     | 14.094              | 5.93                 | 2x                                     | 98                   |
-| 3     | 14.294              | 0.553                | 26x                                    | 12.114               |
-| 4     | 13.994              | 6.804                | 2x                                     | 1237 (20 min)        |
+| Query | Standard (s) | Umbra-mol (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
+| :---- | :----------- | :------------ | :------------------------------------- | :------------------- |
+| 1     | 23.388       | 0.267         | 88x                                    | 0.741                |
+| 2     | 14.094       | 5.93          | 2x                                     | 98                   |
+| 3     | 14.294       | 0.553         | 26x                                    | 12.114               |
+| 4     | 13.994       | 6.804         | 2x                                     | 1237 (20 min)        |
 
 # Introduction
 
