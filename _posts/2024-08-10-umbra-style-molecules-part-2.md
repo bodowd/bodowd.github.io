@@ -31,7 +31,7 @@ Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit exte
 | 3     | 13.027       | 0.263         | 50x                                    | 2.47                 |
 | 4     | 12.245       | 0.255         | 48x                                    | 6.185                |
 
-Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
+Substructure match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
 | Query | Standard (s) | Umbra-mol (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
 | :---- | :----------- | :------------ | :------------------------------------- | :------------------- |
