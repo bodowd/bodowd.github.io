@@ -41,10 +41,11 @@ Substructure match experiments (Standard method, Umbra-mol are in the duckdb_rdk
 # Introduction
 
 Duckdb is an in-process analytical database system, and I began experimenting with
-adding cheminformatic capabilities to duckdb as a duckdb extension. Initial experiments
-showed that exact match molecule queries were quite slow.
+adding cheminformatic capabilities to duckdb as a duckdb extension using [RDKit].
+Initial experiments showed that exact match molecule queries were quite slow in
+duckdb.
 
-If you aren't familiar with OLAP and OLTP, I'll try give a brief, brief intro.
+If you aren't familiar with OLAP and OLTP, I'll try to give a brief, brief intro.
 Online transactional processing (OLTP) databases are optimized for workloads
 that require point lookups. These workloads may just want to access one or
 few records in the database, like adding a molecule to the
