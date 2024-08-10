@@ -16,7 +16,7 @@ useful data into 12 bytes than the 20 bytes I used in the initial implementation
 Furthermore, I applied the second key idea from Umbra-style
 strings -- storing a pointer to the full binary molecule, rather than inlining
 it in the struct. This allowed for speedup of not only exact matches, but also
-enabled substructure matches when combined with a substructure filter developed by dalke.
+enabled faster substructure matches when combined with a substructure filter developed by dalke.
 
 Here are the results, and I describe the process more below:
 
