@@ -211,7 +211,7 @@ The second key idea of Umbra-style strings is to store a pointer to the string
 rather than inlining the string. Likewise, in this work I store a pointer to the binary molecule.
 
 My initial attempt inlined the binary molecule in the struct, and that takes up
-a lot of space (most binary molecules are over 1,000 bytes [supplementary figure](#99percentile).)
+a lot of space (binary molecules can be over 1,000 bytes [supplementary figure](#99percentile).)
 Then when I tried putting the dalke_fp in the prefix, I started to see degradation
 of the exact match performance. Some queries that executed in < 1 sec when
 the prefix was only counts, were now taking > 5 sec. Some experiments got me thinking
