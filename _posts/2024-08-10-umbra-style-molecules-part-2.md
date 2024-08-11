@@ -369,6 +369,12 @@ All comparisons require deserialization of the binary molecule.
 Umbra-mol part 2 represents the Umbra-mol implementation as described above in
 this post.
 
+I ran the test on my laptop:
+AMD Ryzen 5 4500U CPU
+16GB RAM
+
+I used the default settings of duckdb and Postgres.
+
 ## Exact match
 
 Queries are shown in [supplementary 1](#supplementary1).
