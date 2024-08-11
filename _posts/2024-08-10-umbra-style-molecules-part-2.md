@@ -430,7 +430,7 @@ I see 48x-96x speedups, all while having more useful information in the prefix.
 
 The `dalke_fp` seems very effective for short-circuiting, but it also depends on
 the molecules. In the limited samples I tried, I found for some substructures the
-`dalke_fp` could short-circuit all but ~400 molecules out of ~2.7 million molecules.
+`dalke_fp` could short-circuit all but ~400 molecules out of ~2.3 million molecules.
 That means the vast majority of that search did not even need to dereference the pointer
 to the binary molecule nor deserialize it.
 
