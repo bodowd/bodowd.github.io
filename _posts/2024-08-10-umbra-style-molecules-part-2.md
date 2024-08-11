@@ -127,6 +127,10 @@ implementation. More experiments suggested it was the size of the Umbra-mol in-m
 And that led me to explore how to implement the second key idea from Umbra-style strings:
 store a pointer to the string rather than inlining the string into the struct.
 
+In the rest of this post, I will describe improvements made to the prefix and storing
+a pointer to the binary molecule rather than inlining the data. I will then present
+some simple experiments I did to see how these changes affect execution time.
+
 # Improvements to the first attempt at Umbra-mol
 
 ## Prefix improvements
@@ -205,7 +209,7 @@ of the binary molecule to create a prefix of 12 bytes -- 4 bytes for the counts,
 short-circuiting exact match comparisons, but I haven't checked this. If so,
 the counts prefix is unnecessary, and the prefix could be shrunk to 8 bytes.
 
-## Storing a pointer to the binary molecule
+# Storing a pointer to the binary molecule
 
 The second key idea of Umbra-style strings is to store a pointer to the string
 rather than inlining the string. Likewise, in this work I store a pointer to the binary molecule.
