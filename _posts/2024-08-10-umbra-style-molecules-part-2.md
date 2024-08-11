@@ -84,7 +84,6 @@ Umbra-style strings to molecules: a prefix for short-circuting comparisons, and 
 a pointer to a string rather than inlining the string in the in-memory representation.
 
 Molecule comparison is more complicated than strings ([learn more here]), but
-the idea of short-circuiting comparisons is not a new one for molecule searches, and
 I thought the ideas from Umbra-style strings could be translated to molecules.
 
 In my intial attempt with "Umbra-mols" (see [part 1]), I applied only the prefix idea. I
