@@ -373,8 +373,12 @@ Umbra-mol part 2 represents the Umbra-mol implementation as described above in
 this post.
 
 I ran the test on my laptop:
+
 AMD Ryzen 5 4500U CPU
+
 16GB RAM
+
+Samsung PM991 SSD
 
 I used the default settings of duckdb and Postgres.
 
