@@ -1,0 +1,81 @@
+Hello everyone, I will be talking about a duckdb extension I've been working on called duckdb_rdkit.
+It adds cheminformatics functionality to duckdb with RDKit
+
+
+First, I would like to give some context.
+There are two main types of database workloads: OLTP & OLAP
+OLTP queries typically access few rows in the database, like updating an amount in an account. 
+The DB needs to find that account, that row, edit it, and finish the transaction, quickly.
+OLAP queries typically access many or all rows in a column. For example, to find the average
+account balance, the DB needs to go to every record and add it up.
+Since these workloads are very different, there are different techniques used to build these systems.
+
+Duckdb is an in-process OLAP database and query execution engine. 
+Lot's to say about it, no time.
+
+RDKit is a cheminformatics toolkit for working with molecules on computers.
+It enables us to work with molecular file formats, perform operations on or with molecules, etc.
+
+Duckdb + RDKit allows us to do cheminformatics work with the query execution engine of duckdb
+
+
+
+In this talk I would like to tell you the story behind implementing exact match and substructure match for duckdb_rdkit
+Exact match is "is this molecule the same as that molecule"? Depending how you define same.
+Substructure match is "is this fragment found in that molecule?"
+
+
+In order to do cheminformatics work, we need the RDKit Mol object. This contains a lot of information about the molecule.
+For example, starting from a string representation of a molecule, like SMILES or SDF, or something else, RDKit will parse this
+format and build a RDKit Mol object. From there you could compare two objects and see if they are the same molecule, for example.
+In order to persist this object, the in-memory object needs to be serialized to binary. Then we can store it in a file as binary.
+
+
+In my initial attempt at implementing exact match in this extension, I took the code for comparing molecules from the Postgres and 
+SQLite RDKit extensions, and I adapted it for duckdb.
+It did not perform very well.
+Here are the results of 4 queries, that I made up. Disclaimer, maybe these are dumb queries. But you can see they take 12-17 seconds
+when many of these execute in less than a second or even half a second in Postgres with RDKit.
+This was run on chembl 33 dataset with ~2.3 million molecules and default duckdb settings.
+
+
+Now I will fast forward over a lot of trial and error, experiments, and feedback...
+
+In my next attempts, I was inspired by Umbra-style strings, which is a string implementation used by the Umbra system 
+developed by researchers at TUM. I don't have time to discuss what they did in their
+string implementation, but you will see their ideas applied here to a chemistry setting.
+
+
+For the first improvement, I began by examining the code for comparing molecules
+You can see the first 4 checks are comparing things like if the two molecules have 
+the same number of atoms, or bonds, etc. If one molecule has 20 atoms and the other has 
+3, they can't be the same molecule.
+Only if these inexpensive checks all match up between the two molecules, more expensive
+checks are performed.
+
+The function parameters take a RDKit Mol, the in-memory object.
+In the database context, recall that this means the binary that is stored on disk
+needs to be deserialized to the RDKit Mol object.
+
+The first optimization was to calculate and store these in front of the binary 
+molecule object. So now I have a, at the time, 20 byte prefix, followed by 
+the binary molecule, instead of just the binary molecule.
+
+Now I can compare the prefix binary directly, do the same checks. Return false
+if prefixes don't match. This way we can short-circuit and exit early without
+even deserializing the binary molecule. 
+In a database, typically most of the comparisons are going to not be a match. 
+That should give a performance boost.
+
+To optimize this prefix, I analyzed chembl 33 and found that in some cases, 99%
+of the data could be reprsented with just a few bits (8 rings, only need 3 bits)
+
+So I optimized the prefix to fit within 4 bytes, as opposed to my initial attempt 
+of 20 bytes (not shown).
+
+Running this strategy, we see a very nice increase in performance across the 4 queries
+I mentioned earlier.
+
+Avoiding deserialization of the binary molecule is very good
+
+
