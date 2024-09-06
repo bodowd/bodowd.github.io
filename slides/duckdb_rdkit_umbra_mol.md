@@ -464,6 +464,26 @@ total: 27 bits (~4B as opposed to 20B)
 
   - CCC is a substructure of CCCCCCN
 
+  - identify molecular features in a dataset that split the data into smaller and smaller bins
+
+```
+                        all mols
+
+                has O               no O
+
+         has N     no N        has CC   no CC
+
+```
+
+- The hard part is identifying these features
+  <br>
+- Once identified: create a fingerprint (1 if present, 0 if not) and use for short-circuiting
+  <br>
+- 55 bits were found by Greg Landrum to be effective already
+  <br>
+- I incorporated these 55 bits, `dalke_fp`, into the Umbra Mol prefix
+  <br>
+
 - This suggests a possibility of bailing out early. But how to get a meaningful filter?
 - Details here:
   - http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html

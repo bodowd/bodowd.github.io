@@ -1,11 +1,10 @@
 Hello everyone, I will be talking about a duckdb extension I've been working on called duckdb_rdkit.
-It adds cheminformatics functionality to duckdb with RDKit
 
 
 First, I would like to give some context.
 There are two main types of database workloads: OLTP & OLAP
 OLTP queries typically access few rows in the database, like updating an amount in an account. 
-The DB needs to find that account, that row, edit it, and finish the transaction, quickly.
+The DB needs to find that row, edit it, and finish the transaction, quickly.
 OLAP queries typically access many or all rows in a column. For example, to find the average
 account balance, the DB needs to go to every record and add it up.
 Since these workloads are very different, there are different techniques used to build these systems.
@@ -20,28 +19,37 @@ Duckdb + RDKit allows us to do cheminformatics work with the query execution eng
 
 
 
-In this talk I would like to tell you the story behind implementing exact match and substructure match for duckdb_rdkit
+In this talk I would like to tell you the story behind implementing exact match 
+and substructure match for duckdb_rdkit
 Exact match is "is this molecule the same as that molecule"? Depending how you define same.
 Substructure match is "is this fragment found in that molecule?"
 
 
-In order to do cheminformatics work, we need the RDKit Mol object. This contains a lot of information about the molecule.
-For example, starting from a string representation of a molecule, like SMILES or SDF, or something else, RDKit will parse this
-format and build a RDKit Mol object. From there you could compare two objects and see if they are the same molecule, for example.
-In order to persist this object, the in-memory object needs to be serialized to binary. Then we can store it in a file as binary.
+In order to do cheminformatics work, we need the RDKit Mol object. 
+This contains a lot of information about the molecule.
+For example, starting from a string representation of a molecule, like SMILES or SDF,
+or something else, RDKit will parse this
+format and build a RDKit Mol object.
+From there you could compare two objects and see if they are the same molecule, for example.
+In order to persist this object, the in-memory object needs to be serialized to 
+binary. Then we can store it in a file as binary.
 
 
-In my initial attempt at implementing exact match in this extension, I took the code for comparing molecules from the Postgres and 
+In my initial attempt at implementing exact match in this extension,
+I took the code for comparing molecules from the Postgres and 
 SQLite RDKit extensions, and I adapted it for duckdb.
 It did not perform very well.
-Here are the results of 4 queries, that I made up. Disclaimer, maybe these are dumb queries. But you can see they take 12-17 seconds
+Here are the results of 4 queries, that I made up. 
+Disclaimer, maybe these are dumb queries. 
+But you can see they take 12-17 seconds
 when many of these execute in less than a second or even half a second in Postgres with RDKit.
 This was run on chembl 33 dataset with ~2.3 million molecules and default duckdb settings.
 
 
 Now I will fast forward over a lot of trial and error, experiments, and feedback...
 
-In my next attempts, I was inspired by Umbra-style strings, which is a string implementation used by the Umbra system 
+In my next attempts, I was inspired by Umbra-style strings, which is a string 
+implementation used by the Umbra database managagement system 
 developed by researchers at TUM. I don't have time to discuss what they did in their
 string implementation, but you will see their ideas applied here to a chemistry setting.
 
@@ -77,5 +85,94 @@ Running this strategy, we see a very nice increase in performance across the 4 q
 I mentioned earlier.
 
 Avoiding deserialization of the binary molecule is very good
+
+
+Another cheminformatics task is to query if a structure is part of another structure.
+This is called substructure matching.
+Substructure comparison is computationally expensive. It operates on the molecular
+graph.
+Fortunately, there is an opportunity to short-circuit this comparison as well.
+
+The idea behind the substructure filter is that if the query molecule has Nitrogen,
+but the target does not, then the query cannot be a substructure of the target.
+
+If the target has N, but the query does not, it's still possible that the query
+is a substructure
+
+It's only possible to bail out for the first case: If the query has the feature, but the target does
+not, they cannot be a substructure match.
+
+But to do this, we need a good set of features
+
+Andrew Dalke shared his work on developing a substructure filter in 2012.
+
+Because of limited time, I'll have to skip the details of what he developed, but long 
+story short, he developed a 55 bit fingerprint that we can use to short circuit.
+
+The last item I want to talk about is an optimization of storing a pointer to 
+the binary molecule instead of inlining it into the struct.
+
+During my experiments with the dalke_fp, I found the performance of the extension
+on exact match get worse. I tracked it down to the struct getting too large.
+
+The Umbra Mol looked like this: 12 bytes in the prefix and then the binary
+molecule is inlined in the struct. The average length of a binary molecule is 455 bytes.
+
+Instead, we can apply another idea from the Umbra paper -- storing a pointer to the binary molecule.
+
+A pointer on a 64 bit CPU is 8 bytes long. This can shrink the size of the struct
+significantly.
+
+The tricky part of this is that pointer swizzling is required. The pointer in 
+the struct points to a virtual memory address, but later the data is stored on disk,
+and that memory address is no longer valid later. The pointer needs to be converted
+to an offset on the page, for exmple, and vice versa when the data is brought
+back to memory.
+
+Long story short, I made the Umbra Mol look like a `string_t` which is the Umbra-style
+string implementation in duckdb. Duckdb's internals then handles all this complicated
+stuff
+
+Finally, let's look at how these changes to the Umbra Mol affected performance.
+
+I use default duckdb and postgres settings (did not tune postgres).
+Postgres was running with the RDKit extension in a docker container, and
+there is a gist index on the molecule column, as the RDKit Postgres extension
+documentation instructs.
+
+We see really nice speed-ups when comparing the Umbra-Mol to the standard
+method I initially tried, the one where we deserialize for every comparison.
+
+I didn't have time to go into it, but OLAP systems optimize for full column
+scans. So if you have to deserialize every record, it's very expensive. 
+In OLTP, you might only need to deserialize a few records at the most as you traverse
+a B+Tree.
+
+On the substructure match, we see more variability across the 4 queries. My guess 
+is that this is due to the query molecule. If you look for a general motif found
+in many molecules, the more you have to do a full substructure match.
+But the more specific your query, the more the system can bail out early using
+the substructure filter in the prefix.
+
+Queries 3 and 4 particularly are more OLAP-like queries. There are aggregations
+and joins across multiple tables, which may explain some of the difference 
+between the Postgres and Umbra-Mol duckdb execution times.
+
+Wrapping up, currently not many features are supported, and this is all quite experimental.
+If you are interested, you can check it out on my github.
+
+I'd like to thank Thomas Leyer for giving me ideas when I was trying to get
+the extension built on Github actions.
+Fuad Abdallah for his feedback as a user of the extension.
+I'd also like to thank Andrew Dalke
+for his feedback when I shared this project on hacker news. A lot of the strategies
+in the second version of Umbra Mol were inspired by his feedback.
+
+Thank you all for your attention, and I'm happy to take questions if there's time.
+Otherwise you can email me here
+
+
+
+
 
 

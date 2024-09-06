@@ -1,6 +1,6 @@
 # duckdb_rdkit
 
-Adding cheminformatics functionality to duckdb with RDKit
+Experiments in building a cheminformatics extension for an OLAP database
 
 ---
 
@@ -11,10 +11,16 @@ Adding cheminformatics functionality to duckdb with RDKit
 
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
-    - update amount in an account vs average account balance
+    - access few or single row(s) vs access many or all rows
       <br>
-    - the techniques used in building these systems are very different
-      <br>
+      - update amount in an account vs average account balance
+        <br>
+    - the techniques used in building these systems are very different:
+      - OLTP optimizes for finding individual rows
+        <br>
+      - OLAP optimizes for full column scans
+        <br>
+      - i.e. different strategies to indexing, storage formats, query execution
 
 - duckdb is an in-process OLAP database and query execution engine
   <br>
@@ -43,7 +49,7 @@ Adding cheminformatics functionality to duckdb with RDKit
 
 ## Initial attempt at exact match in duckdb_rdkit:
 
-- adapted the code from RDKit extensions for Postgres & SQLite
+- adapted the code for comparing molecules from RDKit extensions for Postgres & SQLite
   <br>
 - very poor performance
 
@@ -194,28 +200,25 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter:
   <br>
-  - If query molecule has N, but target does not, then query cannot be substructure of target
+
+  - Query: NC, Target: OC -- not a substructure
     <br>
-  - If target has N, but query does not, still possible that query is substructure of target (i.e. query: CC, target: CCCCN)
+  - Query: CC, Target: NCC -- could be substructure, need isomorphism test
     <br>
+  - Can only bail out for the first case: If the query has the feature, but the
+    target does not, cannot be a substructure match
+    <br>
+  - Need a good set of features
+
 - Andrew Dalke shared his work on developing a substructure filter (2012):
   <br>
-  - identify molecular features in a dataset that split the data into smaller and smaller bins
 
-```
-                        all mols
+  - Long story short: 55 bit fingerprint (`dalke_fp`) (1 if feature present, 0 if not) that
+    we can use to short-circuit by checking if the bit is on in the query, but
+    off in the target
+    <br>
 
-                has O               no O
-
-         has N     no N        has CC   no CC
-
-```
-
-- The hard part is identifying these features
-  <br>
-- Once identified: create a fingerprint (1 if present, 0 if not) and use for short-circuiting
-  <br>
-- 55 bits were found by Greg Landrum to be effective already
+- Incorporated into the prefix of Umbra Mol for speeding up substructure matches
   <br>
 - Details here:
   - http://www.dalkescientific.com/writings/diary/archive/2012/06/11/optimizing_substructure_keys.html
@@ -261,6 +264,11 @@ total: 27 bits (~4B as opposed to 20B)
 ~~~
 ```
 
+- Default duckdb & Postgres settings
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
+- Postgres running in docker
+  - gist index on molecules in Postgres
+
 ##### Exact match
 
 | Query | Standard method (s) | Umbra-mol v2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
@@ -279,11 +287,6 @@ total: 27 bits (~4B as opposed to 20B)
 | 3     | 14.294              | 0.553            | 26x                                    | 12.114               |
 | 4     | 13.994              | 6.804            | 2x                                     | 1237 (20 min)        |
 
-- Default duckdb & Postgres settings
-- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
-- Postgres running in docker
-  - gist index on molecules in Postgres
-
 ---
 
 # Wrapping up
@@ -296,4 +299,7 @@ total: 27 bits (~4B as opposed to 20B)
 # Acknowledgments
 
 - Thomas Leyer
+- Fuad Abdallah
 - Andrew Dalke
+
+bing.odowd@bayer.com
