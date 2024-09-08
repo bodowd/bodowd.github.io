@@ -265,9 +265,9 @@ total: 27 bits (~4B as opposed to 20B)
 ```
 
 - Default duckdb & Postgres settings
-- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
 - Postgres running in docker
   - gist index on molecules in Postgres
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
 
 ##### Exact match
 
@@ -291,6 +291,9 @@ total: 27 bits (~4B as opposed to 20B)
 
 # Wrapping up
 
+- Not a comprehensive benchmark. I just made up 4 queries, might be stupid queries
+- Not saying this is better than Postgres
+  - type of workload is important (i.e. updating individual record)
 - Currently, not many features, and very experimental
 - github.com/bodowd/duckdb_rdkit
 
@@ -302,4 +305,253 @@ total: 27 bits (~4B as opposed to 20B)
 - Fuad Abdallah
 - Andrew Dalke
 
-bing.odowd@bayer.com
+`bing.odowd@bayer.com`
+
+---
+
+# Supplementary slides
+
+## Exact match queries
+
+Query 1
+
+```sql
+
+-- umbra mol
+select molregno,canonical_smiles, rdkit_mol, umbra_mol from molecule where umbra_is_exact_match(umbra_mol,'Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O');
+
+-- standard
+select molregno,canonical_smiles, rdkit_mol, umbra_mol from molecule where is_exact_match(rdkit_mol,'Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O');
+
+-- postgres
+select molregno,canonical_smiles, rdkit_mol from compound_structures where rdkit_mol@='Cc1cn([C@H]2C[C@H](N=[N+]=[N-])[C@@H](CO)O2)c(=O)[nH]c1=O';
+
+```
+
+---
+
+# Supplementary slides
+
+## Exact match queries
+
+Query 2
+
+```sql
+-- umbra mol
+select molregno,canonical_smiles, rdkit_mol, umbra_mol from molecule where umbra_is_exact_match(umbra_mol,'CCC');
+-- standard
+select molregno,canonical_smiles, rdkit_mol, umbra_mol from molecule where is_exact_match(rdkit_mol,'CCC');
+
+-- postgres
+select molregno,canonical_smiles, rdkit_mol from compound_structures where rdkit_mol@='CCC';
+
+```
+
+---
+
+# Supplementary slides
+
+## Exact match queries
+
+Query 3
+
+```sql
+
+-- umbra mol
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.umbra_mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE umbra_is_exact_match(m.umbra_mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC');
+
+-- standard
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.rdkit_mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE is_exact_match(m.rdkit_mol, 'COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC');
+
+-- postgres
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.rdkit_mol FROM compound_structures m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE m.rdkit_mol@='COc1cc(/C=C/C(=O)OCCCCCCN(C)CCCCOC(=O)c2c3ccccc3cc3ccccc23)cc(OC)c1OC';
+
+```
+
+---
+
+# Supplementary slides
+
+## Exact match queries
+
+Query 4
+
+```sql
+
+-- umbra mol
+  SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.umbra_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE umbra_is_exact_match(m.umbra_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+      GROUP BY m.umbra_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+-- standard
+SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE is_exact_match(m.rdkit_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+
+-- postgres
+SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM compound_structures m
+  INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+  WHERE m.rdkit_mol@='CC(=O)Nc1nnc(S(N)(=O)=O)s1'
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+```
+
+---
+
+# Supplementary slides
+
+## Substructure match queries
+
+Query 1
+
+```sql
+
+-- umbra mol
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.umbra_mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE umbra_is_substruct(m.umbra_mol, 'COc1cc2c(Nc3cc(CC(=O)Nc4cccc(F)c4F)[nH]n3)ncnc2cc1OCCCN(CCO)CC(C)C');
+
+-- standard
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.rdkit_mol FROM molecule m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE is_substruct(m.rdkit_mol, 'COc1cc2c(Nc3cc(CC(=O)Nc4cccc(F)c4F)[nH]n3)ncnc2cc1OCCCN(CCO)CC(C)C');
+
+-- postgres
+SELECT pbd.prediction_method, a.value, a.units, a.type, a.relation, m.rdkit_mol FROM compound_structures m
+  INNER JOIN activities a ON a.molregno=m.molregno
+  INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+  WHERE m.rdkit_mol@='COc1cc2c(Nc3cc(CC(=O)Nc4cccc(F)c4F)[nH]n3)ncnc2cc1OCCCN(CCO)CC(C)C';
+
+```
+
+---
+
+# Supplementary slides
+
+## Substructure match queries
+
+Query 2
+
+```sql
+-- umbra mol
+SELECT count(*) FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      WHERE umbra_is_substruct(m.umbra_mol, 'O=CNCCc1ccccc1');
+
+-- standard
+SELECT count(*) FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      WHERE is_substruct(m.rdkit_mol, 'O=CNCCc1ccccc1');
+
+-- postgres
+SELECT count(*) FROM compound_structures m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      WHERE m.rdkit_mol@>'O=CNCCc1ccccc1';
+
+```
+
+---
+
+# Supplementary slides
+
+## Substructure match queries
+
+Query 3
+
+```sql
+
+-- umbra mol
+SELECT avg(a.value), stddev(a.value), a.units,a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.umbra_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE umbra_is_substruct(m.umbra_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+      GROUP BY m.umbra_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+-- normal
+SELECT avg(a.value), stddev(a.value), a.units,a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE is_substruct(m.rdkit_mol, 'CC(=O)Nc1nnc(S(N)(=O)=O)s1')
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+
+-- postgres
+SELECT avg(a.value), stddev(a.value), a.units,a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM compound_structures m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE m.rdkit_mol@>'CC(=O)Nc1nnc(S(N)(=O)=O)s1'
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+```
+
+---
+
+# Supplementary slides
+
+## Substructure match queries
+
+Query 4
+
+```sql
+
+-- umbra mol
+  SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.umbra_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE umbra_is_substruct(m.umbra_mol, 'N1C=CC=N1')
+      GROUP BY m.umbra_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+-- standard
+  SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM molecule m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE is_substruct(m.rdkit_mol, 'N1C=CC=N1')
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+
+-- postgres
+SELECT avg(a.value), stddev(a.value), a.units, a.type, count(a.value), a.relation, bs.site_name, ys.assay_organism, m.rdkit_mol FROM compound_structures m
+      INNER JOIN activities a ON a.molregno=m.molregno
+      INNER JOIN predicted_binding_domains pbd ON pbd.activity_id=a.activity_id
+      INNER JOIN binding_sites bs ON pbd.site_id=bs.tid
+      INNER JOIN assays ys ON ys.tid=bs.tid
+      WHERE m.rdkit_mol@>'N1C=CC=N1'
+      GROUP BY m.rdkit_mol, a.relation, a.units, a.type, bs.site_name, ys.assay_organism;
+
+```
