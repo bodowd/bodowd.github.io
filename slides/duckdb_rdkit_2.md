@@ -512,6 +512,61 @@ total: 27 bits (~4B as opposed to 20B)
 ~~~
 ```
 
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Umbra-Mol results
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
+- Default duckdb & Postgres settings
+- Postgres running in docker
+  - gist index on molecules in Postgres
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Umbra-Mol results
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
+- Default duckdb & Postgres settings
+- Postgres running in docker
+  - gist index on molecules in Postgres
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
+
+##### Exact match
+
+| Query | Standard method (s) | Umbra-mol v2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
+| :---- | :------------------ | :--------------- | :------------------------------------- | :------------------- |
+| 1     | 17.238              | 0.179            | 96x                                    | 0.084                |
+| 2     | 12.555              | 0.145            | 87x                                    | 233                  |
+| 3     | 13.027              | 0.263            | 50x                                    | 2.47                 |
+| 4     | 12.245              | 0.255            | 48x                                    | 6.185                |
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Umbra-Mol results
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
 - Default duckdb & Postgres settings
 - Postgres running in docker
   - gist index on molecules in Postgres
@@ -539,10 +594,14 @@ total: 27 bits (~4B as opposed to 20B)
 
 # Wrapping up
 
-- Not a comprehensive benchmark. I just made up 4 queries, might be stupid queries
-- Not saying this is better than Postgres
+- Not a comprehensive benchmark. It's just 4 queries that I made up
+  <br>
+- Not saying this is better than Postgres + RDKit
+  <br>
   - type of workload is important (i.e. updating individual record)
+    <br>
 - Currently, not many features, and very experimental
+  <br>
 - github.com/bodowd/duckdb_rdkit
 
 ---
