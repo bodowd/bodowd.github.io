@@ -114,6 +114,37 @@ Experiments in building a cheminformatics extension for an OLAP database
   <br>
 - is this fragment found in that molecule?
 
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Exact match and substructure match
+
+- is this molecule the same as that molecule?
+  <br>
+- is this fragment found in that molecule?
+
+## The Mol object
+
+```
+~~~graph-easy --as=boxart
+[ CCO (SMILES) ]  <-> [ RDKit Mol object (in-memory) ]  <-> [ Serialize to binary (on-disk)]
+~~~
+```
+
+- The RDKit Mol object contains a lot of information about the molecule for
+  cheminformatics work
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Exact match and substructure match
+
+- is this molecule the same as that molecule?
+  <br>
+- is this fragment found in that molecule?
+
 ## The Mol object
 
 ```
