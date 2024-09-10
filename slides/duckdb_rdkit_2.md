@@ -82,7 +82,7 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 ## Short-circuiting for exact match
 
-- Examined the code for comparing molecules in the Postgres and SQLite RDKit extensions
+- Examined the code for comparing molecules
 
 ```c++
 bool mol_cmp(const RDKit::ROMol &m1, const RDKit::ROMol &m2) {
@@ -203,7 +203,7 @@ total: 27 bits (~4B as opposed to 20B)
 
   - Query: NC, Target: OC -- not a substructure
     <br>
-  - Query: CC, Target: NCC -- could be substructure, need isomorphism test
+  - Query: CC, Target: NCC -- could be substructure, need full substructure test
     <br>
   - Can only bail out for the first case: If the query has the feature, but the
     target does not, cannot be a substructure match
