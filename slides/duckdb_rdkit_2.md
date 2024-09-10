@@ -241,6 +241,20 @@ bool mol_cmp(const RDKit::ROMol &m1, const RDKit::ROMol &m2) {
 ~~~
 ```
 
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Short-circuiting for exact match
+
+- Store the counts in a prefix in front of the binary molecule
+
+```
+~~~graph-easy --as=boxart
+[num_atoms | num_bonds | amw | num_rings | binary rdkit molecule]
+~~~
+```
+
 - Compare prefix binary directly
   <br>
   - return false if prefixes don't match
