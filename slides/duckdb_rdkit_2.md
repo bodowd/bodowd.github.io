@@ -448,6 +448,46 @@ total: 27 bits (~4B as opposed to 20B)
 ~~~
 ```
 
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Store pointer to binary molecule instead of inlining
+
+- During experiments with dalke_fp substructure filter, saw performance regression
+  <br>
+  - Tracked it down to the struct getting too big
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| binary rdkit molecule (chembl 33 avg: ~455B)]
+~~~
+```
+
+- Storing a pointer to the binary molecule can shrink the struct significantly
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Store pointer to binary molecule instead of inlining
+
+- During experiments with dalke_fp substructure filter, saw performance regression
+  <br>
+  - Tracked it down to the struct getting too big
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| binary rdkit molecule (chembl 33 avg: ~455B)]
+~~~
+```
+
 - Storing a pointer to the binary molecule can shrink the struct significantly
 
 ```
