@@ -10,12 +10,90 @@ Experiments in building a cheminformatics extension for an OLAP database
   <br>
 
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
+
+---
+
+# Background information
+
+- Two main types of database workloads
+  <br>
+
+  - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
+    <br>
+    - access few or single row(s) vs access many or all rows
+
+---
+
+# Background information
+
+- Two main types of database workloads
+  <br>
+
+  - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
+    <br>
+    - access few or single row(s) vs access many or all rows
+      <br>
+      - update amount in an account vs average account balance
+
+---
+
+# Background information
+
+- Two main types of database workloads
+  <br>
+
+  - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
       <br>
       - update amount in an account vs average account balance
         <br>
     - the techniques used in building these systems are very different:
+      <br>
+      - OLTP optimizes for finding individual rows
+        <br>
+      - OLAP optimizes for full column scans
+        <br>
+      - i.e. different strategies to indexing, storage formats, query execution
+
+---
+
+# Background information
+
+- Two main types of database workloads
+  <br>
+
+  - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
+    <br>
+    - access few or single row(s) vs access many or all rows
+      <br>
+      - update amount in an account vs average account balance
+        <br>
+    - the techniques used in building these systems are very different:
+      <br>
+      - OLTP optimizes for finding individual rows
+        <br>
+      - OLAP optimizes for full column scans
+        <br>
+      - i.e. different strategies to indexing, storage formats, query execution
+
+- duckdb is an in-process OLAP database and query execution engine
+
+---
+
+# Background information
+
+- Two main types of database workloads
+  <br>
+
+  - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
+    <br>
+    - access few or single row(s) vs access many or all rows
+      <br>
+      - update amount in an account vs average account balance
+        <br>
+    - the techniques used in building these systems are very different:
+      <br>
       - OLTP optimizes for finding individual rows
         <br>
       - OLAP optimizes for full column scans
