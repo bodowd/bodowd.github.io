@@ -275,9 +275,20 @@ bool mol_cmp(const RDKit::ROMol &m1, const RDKit::ROMol &m2) {
 
 ## Short-circuiting for exact match
 
+- In initial experiments, I used 4B each
+
+- Analyzed chembl 33 to optimize size of prefix
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Short-circuiting for exact match
+
+- In initial experiments, I used 4B each
+
 - Analyzed chembl 33 to optimize size of prefix
   <br>
-  - in some cases, 99% of the data can be represented with a few bits (initial experiments I used 4B each)
 
 ```
 D select quantile_cont(num_atoms, 0.99), quantile_cont(num_bonds, 0.99), quantile_cont(num_rings, 0.99), quantile_cont(amw::integer, 0.99) from molecule;
@@ -290,6 +301,31 @@ D select quantile_cont(num_atoms, 0.99), quantile_cont(num_bonds, 0.99), quantil
 Run Time (s): real 0.190 user 0.182839 sys 0.164021
 
 ```
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Short-circuiting for exact match
+
+- In initial experiments, I used 4B each
+
+- Analyzed chembl 33 to optimize size of prefix
+  <br>
+
+```
+D select quantile_cont(num_atoms, 0.99), quantile_cont(num_bonds, 0.99), quantile_cont(num_rings, 0.99), quantile_cont(amw::integer, 0.99) from molecule;
+┌────────────────────────────────┬────────────────────────────────┬────────────────────────────────┬───────────────────────────────────────────┐
+│ quantile_cont(num_atoms, 0.99) │ quantile_cont(num_bonds, 0.99) │ quantile_cont(num_rings, 0.99) │ quantile_cont(CAST(amw AS INTEGER), 0.99) │
+│             double             │             double             │             double             │                  double                   │
+├────────────────────────────────┼────────────────────────────────┼────────────────────────────────┼───────────────────────────────────────────┤
+│                          200.0 │                           37.0 │                            8.0 │                                    1446.0 │
+└────────────────────────────────┴────────────────────────────────┴────────────────────────────────┴───────────────────────────────────────────┘
+Run Time (s): real 0.190 user 0.182839 sys 0.164021
+
+```
+
+- in some cases, 99% of the data can be represented with a few bits
 
 - number of atoms, 7 bits (oops - but still good: 97th percentile is 119 atoms)
 - number of bonds, 6 bits
