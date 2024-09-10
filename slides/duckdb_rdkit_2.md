@@ -355,7 +355,7 @@ total: 27 bits (~4B as opposed to 20B)
 
 ## Substructure filter: dalke_fp
 
-- Substructure comparison is computationally expensive: complicated graph stuff
+- Substructure comparison is computationally expensive: complicated graph calculations
   <br>
 - Substructure filter:
   <br>
@@ -368,6 +368,55 @@ total: 27 bits (~4B as opposed to 20B)
     target does not, cannot be a substructure match
     <br>
   - Need a good set of features
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Substructure filter: dalke_fp
+
+- Substructure comparison is computationally expensive: complicated graph calculations
+  <br>
+- Substructure filter:
+  <br>
+
+  - Query: NC, Target: OC -- not a substructure
+    <br>
+  - Query: CC, Target: NCC -- could be substructure, need full substructure test
+    <br>
+  - Can only bail out for the first case: If the query has the feature, but the
+    target does not, cannot be a substructure match
+    <br>
+  - Need a good set of features
+    <br>
+
+- Andrew Dalke shared his work on developing a substructure filter (2012):
+  <br>
+
+  - Long story short: 55 bit fingerprint (`dalke_fp`) (1 if feature present, 0 if not) that
+    we can use to short-circuit by checking if the bit is on in the query, but
+    off in the target
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Substructure filter: dalke_fp
+
+- Substructure comparison is computationally expensive: complicated graph calculations
+  <br>
+- Substructure filter:
+  <br>
+
+  - Query: NC, Target: OC -- not a substructure
+    <br>
+  - Query: CC, Target: NCC -- could be substructure, need full substructure test
+    <br>
+  - Can only bail out for the first case: If the query has the feature, but the
+    target does not, cannot be a substructure match
+    <br>
+  - Need a good set of features
+    <br>
 
 - Andrew Dalke shared his work on developing a substructure filter (2012):
   <br>
