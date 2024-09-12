@@ -356,8 +356,44 @@ total: 27 bits (~4B as opposed to 20B)
 ## Substructure filter: dalke_fp
 
 - Substructure comparison is computationally expensive: complicated graph calculations
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Substructure filter: dalke_fp
+
+- Substructure comparison is computationally expensive: complicated graph calculations
   <br>
-- Substructure filter:
+- Substructure filter: let's say we have a bit to mark the presence of N
+  <br>
+
+  - Query: NC, Target: OC -- not a substructure
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Substructure filter: dalke_fp
+
+- Substructure comparison is computationally expensive: complicated graph calculations
+  <br>
+- Substructure filter: let's say we have a bit to mark the presence of N
+  <br>
+
+  - Query: NC, Target: OC -- not a substructure
+    <br>
+  - Query: CC, Target: NCC -- could be substructure, need full substructure test
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Substructure filter: dalke_fp
+
+- Substructure comparison is computationally expensive: complicated graph calculations
+  <br>
+- Substructure filter: let's say we have a bit to mark the presence of N
   <br>
 
   - Query: NC, Target: OC -- not a substructure
@@ -377,7 +413,7 @@ total: 27 bits (~4B as opposed to 20B)
 
 - Substructure comparison is computationally expensive: complicated graph calculations
   <br>
-- Substructure filter:
+- Substructure filter: let's say we have a bit to mark the presence of N
   <br>
 
   - Query: NC, Target: OC -- not a substructure
@@ -405,7 +441,7 @@ total: 27 bits (~4B as opposed to 20B)
 
 - Substructure comparison is computationally expensive: complicated graph calculations
   <br>
-- Substructure filter:
+- Substructure filter: let's say we have a bit to mark the presence of N
   <br>
 
   - Query: NC, Target: OC -- not a substructure
@@ -581,6 +617,67 @@ total: 27 bits (~4B as opposed to 20B)
 | 3     | 13.027              | 0.263            | 50x                                    | 2.47                 |
 | 4     | 12.245              | 0.255            | 48x                                    | 6.185                |
 
+- results in parentheses are results from a further optimization: simplified code to
+  reduce pointer chasing. Mostly helps exact match.
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Umbra-Mol results
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
+- Default duckdb & Postgres settings
+- Postgres running in docker
+  - gist index on molecules in Postgres
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
+
+##### Exact match
+
+| Query | Standard method (s) | Umbra-mol v2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
+| :---- | :------------------ | :--------------- | :------------------------------------- | :------------------- |
+| 1     | 17.238              | 0.179 (0.082)    | 96x (210x)                             | 0.084                |
+| 2     | 12.555              | 0.145 (0.064)    | 87x (196x)                             | 233                  |
+| 3     | 13.027              | 0.263 (0.256)    | 50x (51x)                              | 2.47                 |
+| 4     | 12.245              | 0.255 (0.241)    | 48x (51x)                              | 6.185                |
+
+- results in parentheses are results from a further optimization: simplified code to
+  reduce pointer chasing. Mostly helps exact match.
+
+---
+
+# Implementing the duckdb_rdkit extension
+
+## Umbra-Mol results
+
+```
+~~~graph-easy --as=boxart
+[counts (4B) | dalke_fp (8B)| pointer to binary molecule (8B -- 64 bit CPU)]
+~~~
+```
+
+- Default duckdb & Postgres settings
+- Postgres running in docker
+  - gist index on molecules in Postgres
+- AMD Ryzen 5 4500U CPU, 16GB RAM, Samsung PM991 SSD
+
+##### Exact match
+
+| Query | Standard method (s) | Umbra-mol v2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
+| :---- | :------------------ | :--------------- | :------------------------------------- | :------------------- |
+| 1     | 17.238              | 0.179 (0.082)    | 96x (210x)                             | 0.084                |
+| 2     | 12.555              | 0.145 (0.064)    | 87x (196x)                             | 233                  |
+| 3     | 13.027              | 0.263 (0.256)    | 50x (51x)                              | 2.47                 |
+| 4     | 12.245              | 0.255 (0.241)    | 48x (51x)                              | 6.185                |
+
+- results in parentheses are results from a further optimization: simplified code to
+  reduce pointer chasing. Mostly helps exact match.
+
 ##### Substructure match
 
 | Query | Standard method (s) | Umbra-mol v2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
@@ -588,7 +685,7 @@ total: 27 bits (~4B as opposed to 20B)
 | 1     | 23.388              | 0.267            | 88x                                    | 0.741                |
 | 2     | 14.094              | 5.93             | 2x                                     | 98                   |
 | 3     | 14.294              | 0.553            | 26x                                    | 12.114               |
-| 4     | 13.994              | 6.804            | 2x                                     | 1237 (20 min)        |
+| 4     | 13.994              | 6.804 (2.352)    | 2x (6x)                                | 1237 (20 min)        |
 
 ---
 
