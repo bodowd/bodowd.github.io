@@ -38,9 +38,6 @@ The context will first call `Query` and then that will call `ParseStatements`.
 When the statement is parsed by `ParseStatementsInternal`, it will call
 `HandlePragmaStatements`.
 
-From there, the UDF pragma function introduced
-by the authors seems to get invoked.
-
 ```cpp
 void PragmaHandler::HandlePragmaStatements(ClientContextLock &lock, vector<unique_ptr<SQLStatement>> &statements) {
 	// first check if there are any pragma statements
@@ -65,6 +62,8 @@ void PragmaHandler::HandlePragmaStatements(ClientContextLock &lock, vector<uniqu
 }
 
 ```
+
+The UDF is detected by duckdb as a PRAGMA statement.
 
 Here we see the statement has the `transpile` function is passed the UDF.
 
