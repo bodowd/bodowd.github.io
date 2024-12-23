@@ -1,9 +1,9 @@
 ---
 layout: post
-title: DuckDB Pragma statements and Client Context note
+title: How PRISM optimizes UDFs via a DuckDB extension
 description: ""
 summary: ""
-tags: [duckdb]
+tags: [duckdb, PRISM, UDF]
 ---
 
 This paper [The Key to Effective UDF Optimization:
