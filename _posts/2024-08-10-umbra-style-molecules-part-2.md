@@ -15,7 +15,7 @@ This caused a degradation in exact match performance. Here in part 2, I improved
 useful data into 12 bytes than the 20 bytes I used in the initial implementation.
 Furthermore, I applied the second key idea from Umbra-style
 strings -- storing a pointer to the full binary molecule, rather than inlining
-it in the struct. This allowed for speedup of not only exact matches, but also
+the large binary molecule in the struct. This allowed for speedup of not only exact matches, but also
 enabled faster substructure matches when combined with a substructure filter developed by Andrew Dalke.
 
 Here are the results, and I describe the process more below. You can
@@ -77,7 +77,7 @@ on Youtube by the professors at CMU, if you are interested in more information.
 That being said, what strategies can be employed to speed up these cheminformatic comparisons,
 in duckdb?
 
-I began to look into how to improve this performance, and was inspired by [Umbra-style strings], aka
+I was inspired by [Umbra-style strings], aka
 German-style strings, which is a string format adopted by several data processing
 systems, including duckdb. There are two key ideas that I applied from
 Umbra-style strings to molecules: a prefix for short-circuting comparisons, and storing
@@ -91,20 +91,10 @@ followed previous examples from [chemicalite] and the [RDKit Postgres extension]
 and used counts like the number of atoms, bonds, etc. which are cheap to
 compute and store. I put these counts in a prefix, and compared the prefixes of
 two molecules to bail out of the function early if the prefixes did not match.
-If two molecules have different number of atoms, they cannot be the same molecule.
+For example, if two molecules have different number of atoms, they cannot be the same molecule.
 This gave a huge improvement in exact match comparisons, achieving up to 60x speedup
 over the "standard" implementation without a prefix in some simple experiments
 I did.
-
-Processing a molecule involves first parsing some kind of string molecular format into
-a RDKit molecule object. Then to store this data, it needs to be serialized to binary.
-
-```
-SMILES -> RDKit Molecule object -> serialize to binary (binary molecule)
-```
-
-To do cheminformatic work on this stored molecule, we need to deserialize the
-binary into the in-memory RDKit Molecule object.
 
 The prefix sits in front of a binary molecule object, and my first attempt used
 4 bytes per field.
@@ -113,18 +103,11 @@ The prefix sits in front of a binary molecule object, and my first attempt used
 | 4 bytes - number of atoms | 4 bytes - number of bonds | 4 bytes - amw | 4 bytes - number of rings | 4 bytes - size of the binary molecule | n bytes - binary molecule |
 ```
 
-The initial experiments suggested that this deserialization process is very expensive,
-especially in an OLAP scenario where the full column is being scanned. Every
-binary molecule would be deserialized in order to do even the inexpensive comparisons.
-The reason the prefix and short-circuit mechanism is so powerful is because it allows
-the system to save time by avoiding this deserialization. Only when the prefixes match,
-deserializing the binary molecule is necessary to do further checks.
-
-After sharing these results, user dalke on Hacker News gave me some great new ideas
+After sharing these results, user dalke on Hacker News gave me some great ideas
 to explore. As I worked on these new ideas, it exposed limitations of the first
-implementation. More experiments suggested it was the size of the Umbra-mol in-memory representation.
-And that led me to explore how to implement the second key idea from Umbra-style strings:
-store a pointer to the string rather than inlining the string into the struct.
+implementation. More experiments suggested the size of the Umbra-mol in-memory representation was a problem.
+This finding led me to explore how to implement the second key idea from Umbra-style strings:
+store a pointer to the string rather than inlining the string into the struct to shrink the size of the Umbra-mol.
 
 In the rest of this post, I will describe improvements made to the prefix and storing
 a pointer to the binary molecule rather than inlining the data. I will then present
@@ -164,10 +147,11 @@ cryptographic hashes, and since these bits cover 99% of the values they are
 responsible for,
 the number of collisions due to being capped are expected to be small.
 
-This results in a counts prefix that fits within 4 bytes.
+This results in a counts prefix that fits within 4 bytes instead of the original 20 bytes.
 
 ### dalke_fp as a substructure filter
 
+I also wanted to store additional data to enable substructure match screening.
 In order to short-circuit substructure matches, we need a way to rule out quickly
 that it is impossible for a query molecule to be a substructure of a target molecule.
 Andrew Dalke has written about this in [2012]. Paraphrasing from Dalke's article, this is
@@ -268,7 +252,7 @@ data. The main difference between the Umbra-mol, or `umbra_mol_t` as the struct
 in my code is called, and `string_t` is the size of the prefix; I want to store
 more data in the prefix than the 4 bytes in `string_t` uses.
 
-Converting an Umbra-mol to `string_t` wasn't really much of a conversion at all.
+Converting an Umbra-mol to `string_t` was easier than I expected.
 I simply made the calculations for the prefixes, and packed it into a `std::string` along with the
 binary molecule at the end, and then passed that to a `string_t`
 constructor.
@@ -434,10 +418,8 @@ I see 48x-96x speedups, all while having more useful information in the prefix.
 The `dalke_fp` seems very effective for short-circuiting, but it also depends on
 the molecules. In the limited samples I tried, I found for some substructures the
 `dalke_fp` could short-circuit all but ~400 molecules out of ~2.3 million molecules.
-That means the vast majority of that search did not even need to dereference the pointer
-to the binary molecule nor deserialize it.
 
-In the substructure matches, the query structure has a big effect on the execution time;
+In the substructure match queries, the query structure has a big effect on the execution time;
 the more general the query structure is, the more that it will match molecules in
 the database. Since there are many matches, the full deserialization and substructure
 match needs to be done to confirm the match. The rarer the query substructure is, the more
