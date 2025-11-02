@@ -23,21 +23,21 @@ jump to the experimental section here: [results](#results)
 
 Exact match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
-| Query | Standard (s) | Umbra-mol (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :----------- | :------------ | :------------------------------------- | :------------------- |
-| 1     | 17.238       | 0.179         | 96x                                    | 0.084                |
-| 2     | 12.555       | 0.145         | 87x                                    | 233                  |
-| 3     | 13.027       | 0.263         | 50x                                    | 2.47                 |
-| 4     | 12.245       | 0.255         | 48x                                    | 6.185                |
+| Query | duckdb_rdkit Standard (s) | duckdb_rdkit Umbra-mol (s) | speedup (Umbra-mol vs standard method) | speedup (Umbra-mol vs Postgres control) | Postgres control (s) |
+| :---- | :------------------------ | :------------------------- | :------------------------------------- | :-------------------------------------- | :------------------- |
+| 1     | 17.238                    | 0.179                      | 96x                                    | 0.5x                                    | 0.084                |
+| 2     | 12.555                    | 0.145                      | 87x                                    | 1606x                                   | 233                  |
+| 3     | 13.027                    | 0.263                      | 50x                                    | 9x                                      | 2.47                 |
+| 4     | 12.245                    | 0.255                      | 48x                                    | 24x                                     | 6.185                |
 
 Substructure match experiments (Standard method, Umbra-mol are in the duckdb_rdkit extension):
 
-| Query | Standard (s) | Umbra-mol (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :----------- | :------------ | :------------------------------------- | :------------------- |
-| 1     | 23.388       | 0.267         | 88x                                    | 0.741                |
-| 2     | 14.094       | 5.93          | 2x                                     | 98                   |
-| 3     | 14.294       | 0.553         | 26x                                    | 12.114               |
-| 4     | 13.994       | 6.804         | 2x                                     | 1237 (20 min)        |
+| Query | duckdb_rdkit Standard (s) | duckdb_rdkit Umbra-mol (s) | speedup (Umbra-mol vs standard method) | speedup (Umbra-mol vs Postgres control) | Postgres control (s) |
+| :---- | :------------------------ | :------------------------- | :------------------------------------- | :-------------------------------------- | :------------------- |
+| 1     | 23.388                    | 0.267                      | 88x                                    | 2x                                      | 0.741                |
+| 2     | 14.094                    | 5.93                       | 2x                                     | 16x                                     | 98                   |
+| 3     | 14.294                    | 0.553                      | 26x                                    | 22x                                     | 12.114               |
+| 4     | 13.994                    | 6.804                      | 2x                                     | 181x                                    | 1237 (20 min)        |
 
 # Introduction
 
@@ -386,23 +386,23 @@ I used the default settings of duckdb and Postgres.
 
 Queries are shown in [supplementary 1](#supplementary1).
 
-| Query | Standard method (s) | Umbra-mol part 2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :------------------ | :------------------- | :------------------------------------- | :------------------- |
-| 1     | 17.238              | 0.179                | 96x                                    | 0.084                |
-| 2     | 12.555              | 0.145                | 87x                                    | 233                  |
-| 3     | 13.027              | 0.263                | 50x                                    | 2.47                 |
-| 4     | 12.245              | 0.255                | 48x                                    | 6.185                |
+| Query | duckdb_rdkit Standard (s) | duckdb_rdkit Umbra-mol (s) | speedup (Umbra-mol vs standard method) | speedup (Umbra-mol vs Postgres control) | Postgres control (s) |
+| :---- | :------------------------ | :------------------------- | :------------------------------------- | :-------------------------------------- | :------------------- |
+| 1     | 17.238                    | 0.179                      | 96x                                    | 0.5x                                    | 0.084                |
+| 2     | 12.555                    | 0.145                      | 87x                                    | 1606x                                   | 233                  |
+| 3     | 13.027                    | 0.263                      | 50x                                    | 9x                                      | 2.47                 |
+| 4     | 12.245                    | 0.255                      | 48x                                    | 24x                                     | 6.185                |
 
 ## Substructure match
 
 Queries are shown in [supplementary 2](#supplementary2).
 
-| Query | Standard method (s) | Umbra-mol part 2 (s) | speedup (Umbra-mol vs standard method) | Postgres control (s) |
-| :---- | :------------------ | :------------------- | :------------------------------------- | :------------------- |
-| 1     | 23.388              | 0.267                | 88x                                    | 0.741                |
-| 2     | 14.094              | 5.93                 | 2x                                     | 98                   |
-| 3     | 14.294              | 0.553                | 26x                                    | 12.114               |
-| 4     | 13.994              | 6.804                | 2x                                     | 1237 (20 min)        |
+| Query | duckdb_rdkit Standard (s) | duckdb_rdkit Umbra-mol (s) | speedup (Umbra-mol vs standard method) | speedup (Umbra-mol vs Postgres control) | Postgres control (s) |
+| :---- | :------------------------ | :------------------------- | :------------------------------------- | :-------------------------------------- | :------------------- |
+| 1     | 23.388                    | 0.267                      | 88x                                    | 2x                                      | 0.741                |
+| 2     | 14.094                    | 5.93                       | 2x                                     | 16x                                     | 98                   |
+| 3     | 14.294                    | 0.553                      | 26x                                    | 22x                                     | 12.114               |
+| 4     | 13.994                    | 6.804                      | 2x                                     | 181x                                    | 1237 (20 min)        |
 
 Note on query 4: I am detecting more matches (16,543 vs 16,165) in the duckdb queries
 than with the Postgres RDKit extension.
