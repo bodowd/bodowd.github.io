@@ -8,7 +8,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
 
 ---
@@ -17,7 +16,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
@@ -28,7 +26,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
@@ -41,7 +38,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
@@ -62,7 +58,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
@@ -85,7 +80,6 @@ Experiments in building a cheminformatics extension for an OLAP database
 
 - Two main types of database workloads
   <br>
-
   - Online Transactional Processing (OLTP) & Online Analytical Processing (OLAP)
     <br>
     - access few or single row(s) vs access many or all rows
@@ -327,7 +321,7 @@ Run Time (s): real 0.190 user 0.182839 sys 0.164021
 
 - in some cases, 99% of the data can be represented with a few bits
 
-- number of atoms, 7 bits (oops - but still good: 97th percentile is 119 atoms)
+- number of atoms, 7 bits (97th percentile is 119 atoms)
 - number of bonds, 6 bits
 - number of rings, 3 bits
 - amw, 11 bits
@@ -367,7 +361,6 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter: let's say we have a bit to mark the presence of N
   <br>
-
   - Query: NC, Target: OC -- not a substructure
 
 ---
@@ -380,7 +373,6 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter: let's say we have a bit to mark the presence of N
   <br>
-
   - Query: NC, Target: OC -- not a substructure
     <br>
   - Query: CC, Target: NCC -- could be substructure, need full substructure test
@@ -395,7 +387,6 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter: let's say we have a bit to mark the presence of N
   <br>
-
   - Query: NC, Target: OC -- not a substructure
     <br>
   - Query: CC, Target: NCC -- could be substructure, need full substructure test
@@ -415,7 +406,6 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter: let's say we have a bit to mark the presence of N
   <br>
-
   - Query: NC, Target: OC -- not a substructure
     <br>
   - Query: CC, Target: NCC -- could be substructure, need full substructure test
@@ -428,7 +418,6 @@ total: 27 bits (~4B as opposed to 20B)
 
 - Andrew Dalke shared his work on developing a substructure filter (2012):
   <br>
-
   - Long story short: 55 bit fingerprint (`dalke_fp`) (1 if feature present, 0 if not) that
     we can use to short-circuit by checking if the bit is on in the query, but
     off in the target
@@ -443,7 +432,6 @@ total: 27 bits (~4B as opposed to 20B)
   <br>
 - Substructure filter: let's say we have a bit to mark the presence of N
   <br>
-
   - Query: NC, Target: OC -- not a substructure
     <br>
   - Query: CC, Target: NCC -- could be substructure, need full substructure test
@@ -456,7 +444,6 @@ total: 27 bits (~4B as opposed to 20B)
 
 - Andrew Dalke shared his work on developing a substructure filter (2012):
   <br>
-
   - Long story short: 55 bit fingerprint (`dalke_fp`) (1 if feature present, 0 if not) that
     we can use to short-circuit by checking if the bit is on in the query, but
     off in the target
@@ -709,7 +696,7 @@ total: 27 bits (~4B as opposed to 20B)
 - Fuad Abdallah
 - Andrew Dalke
 
-`bing.odowd@bayer.com`
+`odowd.bing@gmail.com`
 
 ---
 
